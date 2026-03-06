@@ -81,7 +81,7 @@ Environment variable meanings:
 Start the containers with Podman Compose:
 
 ```bash
-podman compose up -d
+podman compose -f docker-compose.yml up -d
 ```
 
 Start the containers with Docker Compose:
