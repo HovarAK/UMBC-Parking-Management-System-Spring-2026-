@@ -12,15 +12,15 @@ This setup allows contributors to run the database locally in a containerized en
 
 ```text
 UMBC-Parking-Management-System-Spring-2026-/
-├── compose.yaml
-├── .env
-├── .env.example
-├── .gitignore
+├── docker-compose.yml
+├── LICENSE
 ├── README.md
-└── sql/
-    ├── schema.sql
-    ├── seed.sql
-    └── queries.sql
+└── sql
+    ├── createMethods.sql
+    ├── dropDDL.sql
+    ├── dropMethods.sql
+    ├── loadAll.sql
+    └── smoke_test.sql
 ```
 
 ## Setup
