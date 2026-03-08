@@ -1,4 +1,4 @@
-# UMBC-Parking-Management-System-Spring-2026-
+# UMBC-Parking-Management-System
 
 ## Overview
 
