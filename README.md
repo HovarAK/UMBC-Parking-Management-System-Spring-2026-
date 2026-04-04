@@ -228,5 +228,3 @@ To run SQL commands inside pgAdmin:
 2. Select **Query Tool**.
 3. Paste SQL commands into the editor.
 4. Click the **Execute** button to run the query.
-
-This was used during the sanity run to confirm that tables were created successfully, data was loaded correctly, constraints rejected invalid inserts, and joins and aggregations returned expected results.
