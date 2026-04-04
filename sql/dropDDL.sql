@@ -1,0 +1,11 @@
+-- Drop tables & remove FDs in reverse order of creation to avoid dependency issues.
+DROP TABLE IF EXISTS tickets CASCADE;
+DROP TABLE IF EXISTS parkingSessions CASCADE;
+DROP TABLE IF EXISTS reservations CASCADE;
+DROP TABLE IF EXISTS permits CASCADE;
+DROP TABLE IF EXISTS spots CASCADE;
+DROP TABLE IF EXISTS lots CASCADE;
+DROP TABLE IF EXISTS parkingTypes CASCADE;
+DROP TABLE IF EXISTS vehicles CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS systemRoles CASCADE;
