@@ -182,3 +182,51 @@ docker stop umbc_parking_pgadmin
 ```
 
 Stopping or removing the containers does not automatically delete your database data when using named volumes. The data remains stored in the `postgres_data` volume unless you explicitly remove that volume.
+
+## D) pgAdmin Connection Instructions
+
+After the PostgreSQL and pgAdmin containers are running, pgAdmin can be used to connect to the database server and inspect the database contents. In this project, pgAdmin is accessed in the browser at `http://localhost:5050`, unless a different `PGADMIN_PORT` value was configured in the `.env` file. Log in using the configured pgAdmin email and password. :contentReference[oaicite:0]{index=0}
+
+### Add **UMBC Parking DB** as a Server in pgAdmin
+
+After logging into pgAdmin:
+
+1. In the left navigation panel, right-click **Servers**.
+2. Select **Register** \> **Server...**
+3. In the **General** tab, enter:
+   - **Name**: `UMBC Parking DB`
+4. In the **Connection** tab, enter:
+   - **Host name/address**: `db`
+   - **Port**: `5432`
+   - **Maintenance database**: `umbc_parking`
+   - **Username**: the value of `DB_USER`
+   - **Password**: the value of `DB_PASSWORD`
+5. Click **Save**.
+
+The host should be set to `db` because pgAdmin runs in its own container and connects to PostgreSQL over the internal container network. :contentReference[oaicite:1]{index=1}
+
+### How to View the Databases in pgAdmin
+
+Once the server has been added successfully:
+
+1. Expand **Servers** in the left panel.
+2. Expand **UMBC Parking DB**.
+3. Expand **Databases**.
+4. Select the `umbc_parking` database.
+5. Expand:
+   - **Schemas**
+   - **public**
+   - **Tables**
+
+This will display all database tables created by `createDDL.sql`, such as `users`, `vehicles`, `parkingTypes`, `lots`, `spots`, `permits`, `reservations`, `parkingSessions`, and `tickets`.
+
+### How to Open the Query Tool in pgAdmin
+
+To run SQL commands inside pgAdmin:
+
+1. In the left panel, right-click the `umbc_parking` database.
+2. Select **Query Tool**.
+3. Paste SQL commands into the editor.
+4. Click the **Execute** button to run the query.
+
+This was used during the sanity run to confirm that tables were created successfully, data was loaded correctly, constraints rejected invalid inserts, and joins and aggregations returned expected results.
