@@ -12,7 +12,7 @@ CREATE TABLE users (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     role_id INT NOT NULL,
     FOREIGN KEY (role_id) REFERENCES systemRoles(role_id)
 );
@@ -40,23 +40,23 @@ CREATE TABLE parkingTypes (
 -- Lots represent parking areas and are linked to a specific parking type. They have attributes to indicate their location, whether they are gated, and their total capacity.
 CREATE TABLE lots (
     lot_id SERIAL PRIMARY KEY,
-    lot_name VARCHAR(100) UNIQUE NOT NULL,
+    lot_name VARCHAR(100) NOT NULL,
     location VARCHAR(255) NOT NULL,
     is_gated BOOLEAN NOT NULL,
-    total_capacity INT NOT NULL,
-    parking_type_id INT NOT NULL,
-    FOREIGN KEY (parking_type_id) REFERENCES parkingTypes(parking_type_id)
+    UNIQUE (lot_id, spot_label)
 );
 
 -- Spots represent individual parking spaces within a lot and are linked to the lot they belong to. They have attributes to indicate their type, current status, and whether they can be reserved.
 CREATE TABLE spots (
     spot_id SERIAL PRIMARY KEY,
     spot_label VARCHAR(50) NOT NULL,
-    spot_type VARCHAR(50) NOT NULL,
+    parking_type_id INT NOT NULL,
     current_status VARCHAR(20) NOT NULL,
     is_reservable BOOLEAN NOT NULL,
     lot_id INT NOT NULL,
-    FOREIGN KEY (lot_id) REFERENCES lots(lot_id)
+    FOREIGN KEY (lot_id) REFERENCES lots(lot_id),
+    FOREIGN KEY (parking_type_id) REFERENCES parkingTypes(parking_type_id),
+    UNIQUE (lot_id, spot_label)
 );
 
 -- Reservation and Permit Related Tables
@@ -65,10 +65,12 @@ CREATE TABLE spots (
 CREATE TABLE permits (
     permit_id SERIAL PRIMARY KEY,
     permit_type VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     valid_from DATE NOT NULL,
     valid_to DATE NOT NULL,
     user_id INT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CHECK (valid_to >= valid_from)
 );
 
 -- Reservations can be made for specific time slots and are linked to users, vehicles, and parking spots. They can also be associated with parking sessions and permits.
@@ -77,44 +79,49 @@ CREATE TABLE reservations (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     status VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_id INT NOT NULL,
     vehicle_id INT NOT NULL,
     spot_id INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
-    FOREIGN KEY (spot_id) REFERENCES spots(spot_id)
+    FOREIGN KEY (spot_id) REFERENCES spots(spot_id),
+    CHECK (end_time >= start_time)
 );
 
 -- Parking sessions represent the actual parking events and are linked to users, vehicles, parking spots, reservations, and permits. They track the start and end times of parking, as well as the status of the session.
 CREATE TABLE parkingSessions (
     session_id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     session_status VARCHAR(20) NOT NULL,
     user_id INT NOT NULL,
+    vehicle_id INT NOT NULL,
     spot_id INT NOT NULL,
-    reservation_id INT NOT NULL,
-    permit_id INT NOT NULL,
+    reservation_id INT NULL,
+    permit_id INT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
     FOREIGN KEY (spot_id) REFERENCES spots(spot_id),
     FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id),
-    FOREIGN KEY (permit_id) REFERENCES permits(permit_id)
+    FOREIGN KEY (permit_id) REFERENCES permits(permit_id),
+    CHECK (end_time >= start_time)
 );
 
 -- Ticketing Related Tables
 CREATE TABLE tickets (
     ticket_id SERIAL PRIMARY KEY,
-    issue_time TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     violation_type VARCHAR(100) NOT NULL,
     fine_amount DECIMAL(10, 2) NOT NULL,
-    has_paid BOOLEAN NOT NULL,
+    has_paid BOOLEAN NOT NULL DEFAULT FALSE,
     issued_to_user_id INT NOT NULL,
     issued_by_user_id INT NOT NULL,
     spot_id INT NOT NULL,
     vehicle_id INT NOT NULL,
-    permit_id INT NOT NULL,
-    session_id INT NOT NULL,
+    permit_id INT NULL,
+    session_id INT NULL,
     FOREIGN KEY (issued_to_user_id) REFERENCES users(user_id),
     FOREIGN KEY (issued_by_user_id) REFERENCES users(user_id),
     FOREIGN KEY (spot_id) REFERENCES spots(spot_id),
@@ -122,3 +129,41 @@ CREATE TABLE tickets (
     FOREIGN KEY (permit_id) REFERENCES permits(permit_id),
     FOREIGN KEY (session_id) REFERENCES parkingSessions(session_id)
 );
+
+-- Table that represents triggers of the Sensors
+CREATE TABLE IF NOT EXISTS sensorEvents (
+    event_id SERIAL PRIMARY KEY,
+    spot_id INT NOT NULL,
+    event_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    event_type VARCHAR(30) NOT NULL,
+    sensor_value VARCHAR(5),
+    FOREIGN KEY (spot_id) REFERENCES spots(spot_id)
+);
+
+
+-- Trigger / Functions
+-- -------------------------------------------------------------------
+-- Function and Triggers yap yap yap....
+
+-- Issue Permit
+
+-- Make Reervations
+
+-- Delete Reservation
+
+-- Auto-Ticketing Function
+
+-- Trigger on SensorEvents to detect Vehicle
+
+
+-- Views
+-- ----------------------------------------------------------------
+-- Useful Views for Reporting Information
+
+-- CurrentActivePermits
+
+-- CurrentLotAvaliablilty
+
+-- OverduePayments
+
+-- etc...
