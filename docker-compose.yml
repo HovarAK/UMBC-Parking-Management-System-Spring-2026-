@@ -27,7 +27,8 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
-  db_runner:
+  db-runner:
+    image: localhost/umbc-db-runner:latest
     build:
       context: ./runner
       dockerfile: Dockerfile
