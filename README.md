@@ -1,4 +1,4 @@
-# UMBC-Parking-Management-System-Spring-2026-
+# UMBC-Parking-Management-System
 
 ## Overview
 
@@ -12,15 +12,15 @@ This setup allows contributors to run the database locally in a containerized en
 
 ```text
 UMBC-Parking-Management-System-Spring-2026-/
-├── compose.yaml
-├── .env
-├── .env.example
-├── .gitignore
+├── docker-compose.yml
+├── LICENSE
 ├── README.md
-└── sql/
-    ├── schema.sql
-    ├── seed.sql
-    └── queries.sql
+└── sql
+    ├── createMethods.sql
+    ├── dropDDL.sql
+    ├── dropMethods.sql
+    ├── loadAll.sql
+    └── smoke_test.sql
 ```
 
 ## Setup
@@ -228,5 +228,3 @@ To run SQL commands inside pgAdmin:
 2. Select **Query Tool**.
 3. Paste SQL commands into the editor.
 4. Click the **Execute** button to run the query.
-
-This was used during the sanity run to confirm that tables were created successfully, data was loaded correctly, constraints rejected invalid inserts, and joins and aggregations returned expected results.
