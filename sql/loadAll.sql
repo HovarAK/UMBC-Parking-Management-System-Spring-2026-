@@ -167,11 +167,18 @@ VALUES
 
 -- -----------------------------------------------------
 -- permits (10)
--- mix of active and expired permits
+-- mix of active, expired, and upcoming permits
 -- parking_type_id is looked up by parkingTypes.code so this stays
 -- correct regardless of the SERIAL ids parkingTypes happened to get.
 -- Every permit_type here must be a real code from parkingTypes above;
 -- there is no free-text fallback anymore (see permits FK).
+--
+-- valid_from/valid_to are computed relative to CURRENT_DATE, not
+-- hardcoded absolute dates, so this data reads as "active"/"expired"/
+-- "upcoming" correctly no matter when loadAll.sql is actually run --
+-- a fixed date like '2026-08-14' is only "active" until the calendar
+-- catches up to it, which is exactly what happened to the previous
+-- version of this seed data.
 -- -----------------------------------------------------
 INSERT INTO permits (
   parking_type_id,
@@ -180,16 +187,16 @@ INSERT INTO permits (
   user_id
 )
 VALUES
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'E'),   '2025-08-15', '2026-08-14', 1),   -- active admin/employee style
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'D'),   '2025-08-15', '2026-08-14', 2),   -- active enforcement officer
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'D'),   '2024-08-15', '2025-08-14', 3),   -- expired employee
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'A'),   '2025-08-15', '2026-08-14', 4),   -- active commuter
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'A'),   '2024-08-15', '2025-08-14', 5),   -- expired commuter
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'C'),   '2025-08-15', '2026-08-14', 6),   -- active resident
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'B'),   '2025-08-15', '2026-08-14', 7),   -- active walker apartments
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'F'),   '2025-08-15', '2026-08-14', 8),   -- active first-year resident
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'VIS'), '2026-04-18', '2026-04-18', 9),   -- one-day visitor
-  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'VIS'), '2026-04-01', '2026-04-01', 10);  -- expired visitor pass
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'E'),   CURRENT_DATE - 30,  CURRENT_DATE + 335, 1),   -- active admin/employee style
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'D'),   CURRENT_DATE - 30,  CURRENT_DATE + 335, 2),   -- active enforcement officer
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'D'),   CURRENT_DATE - 400, CURRENT_DATE - 35,  3),   -- expired employee
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'A'),   CURRENT_DATE - 30,  CURRENT_DATE + 335, 4),   -- active commuter
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'A'),   CURRENT_DATE - 400, CURRENT_DATE - 35,  5),   -- expired commuter
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'C'),   CURRENT_DATE - 30,  CURRENT_DATE + 335, 6),   -- active resident
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'B'),   CURRENT_DATE - 30,  CURRENT_DATE + 335, 7),   -- active walker apartments
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'F'),   CURRENT_DATE + 14,  CURRENT_DATE + 349, 8),   -- upcoming first-year resident (starts in 2 weeks)
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'VIS'), CURRENT_DATE,       CURRENT_DATE,       9),   -- active one-day visitor (today)
+  ((SELECT parking_type_id FROM parkingTypes WHERE code = 'VIS'), CURRENT_DATE - 60,  CURRENT_DATE - 60,  10);  -- expired one-day visitor pass
 
 -- -----------------------------------------------------
 -- reservations (10)
