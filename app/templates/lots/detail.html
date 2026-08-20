@@ -26,7 +26,7 @@
       {% for s in spots %}
       <tr>
         <td>{{ s.spot_label }}</td>
-        <td>{{ s.type_code }} &ndash; {{ s.type_info }}</td>
+        <td><span class="zone-chip" data-zone="{{ s.type_code }}">{{ s.type_code }}</span> {{ s.type_info }}</td>
         <td><span class="badge badge-{{ s.current_status }}">{{ s.current_status }}</span></td>
         <td>{{ "Yes" if s.is_reservable else "No" }}</td>
         <td>{{ "Yes" if s.is_ada else "No" }}</td>

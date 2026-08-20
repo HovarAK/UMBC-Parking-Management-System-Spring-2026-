@@ -4,12 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}UMBC Parking{% endblock %} · UMBC Parking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="{{ url_for('dashboard.index') }}">UMBC Parking</a>
+      <a class="brand" href="{{ url_for('dashboard.index') }}">
+        <span class="brand-mark">P</span>
+        <span class="brand-text">UMBC&nbsp;<strong>Parking</strong></span>
+      </a>
       <nav class="nav">
         <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
         <a href="{{ url_for('lots.list_lots') }}">Lots</a>
@@ -20,7 +26,7 @@
         <a href="{{ url_for('vehicles.list_vehicles') }}">Vehicles</a>
       </nav>
       <form class="act-as" method="post" action="{{ url_for('session_routes.act_as') }}">
-        <label for="act-as-select">Acting as</label>
+        <label for="act-as-select">Acting&nbsp;as</label>
         <select id="act-as-select" name="user_id" onchange="this.form.submit()">
           <option value="">— none —</option>
           {% for u in all_users_for_act_as() %}

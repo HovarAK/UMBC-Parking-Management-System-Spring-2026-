@@ -8,22 +8,22 @@
   </div>
 </div>
 
-<div class="stat-grid">
-  <div class="stat">
-    <div class="value">{{ active_permits }}</div>
-    <div class="label">Active permits</div>
+<div class="signage-row">
+  <div class="signage-board signage-board--primary">
+    <div class="signage-board__value">{{ "%03d"|format(lot_availability|sum(attribute="available_spots")) }}</div>
+    <div class="signage-board__label">Spaces available</div>
   </div>
-  <div class="stat">
-    <div class="value">{{ overdue.count }}</div>
-    <div class="label">Unpaid tickets</div>
+  <div class="signage-board">
+    <div class="signage-board__value">{{ "%03d"|format(active_permits) }}</div>
+    <div class="signage-board__label">Active permits</div>
   </div>
-  <div class="stat">
-    <div class="value">${{ "%.2f"|format(overdue.total) }}</div>
-    <div class="label">Total owed</div>
+  <div class="signage-board {{ 'signage-board--alert' if overdue.count > 0 }}">
+    <div class="signage-board__value">{{ "%03d"|format(overdue.count) }}</div>
+    <div class="signage-board__label">Unpaid tickets</div>
   </div>
-  <div class="stat">
-    <div class="value">{{ lot_availability|length }}</div>
-    <div class="label">Lots tracked</div>
+  <div class="signage-board">
+    <div class="signage-board__value">${{ "%.0f"|format(overdue.total) }}</div>
+    <div class="signage-board__label">Total owed</div>
   </div>
 </div>
 

@@ -31,7 +31,7 @@
     <thead><tr><th>Type</th><th>Valid from</th><th>Valid to</th></tr></thead>
     <tbody>
       {% for p in permits %}
-      <tr><td>{{ p.code }} &ndash; {{ p.info }}</td><td>{{ p.valid_from }}</td><td>{{ p.valid_to }}</td></tr>
+      <tr><td><span class="zone-chip" data-zone="{{ p.code }}">{{ p.code }}</span> {{ p.info }}</td><td>{{ p.valid_from }}</td><td>{{ p.valid_to }}</td></tr>
       {% endfor %}
     </tbody>
   </table>

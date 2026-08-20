@@ -1,94 +1,193 @@
+/* =====================================================
+   UMBC Parking — design tokens
+   Grounded in actual parking infrastructure vernacular:
+   garage entrance LED signage boards, color-coded permit
+   zone decals, citation paper. Dark "asphalt" is used only
+   for the masthead and the signage boards — the working
+   surface (tables, forms) stays a light, legible "concrete"
+   so the app holds up for extended desk use.
+   ===================================================== */
 :root {
-  --bg: #f5f6f8;
-  --surface: #ffffff;
-  --border: #e0e2e7;
-  --text: #1f2430;
-  --text-muted: #656d7c;
-  --primary: #1e4d8c;
-  --primary-hover: #163a68;
-  --success-bg: #e6f4ea;
-  --success-text: #1e6b34;
-  --error-bg: #fbe9e7;
-  --error-text: #9c2a1f;
-  --info-bg: #e8eef7;
-  --info-text: #1e4d8c;
+  --asphalt: #1e2124;
+  --asphalt-2: #292d31;
+  --concrete: #f4f2ee;
+  --concrete-line: #e3e0d9;
+  --chalk: #ffffff;
+  --ink: #22262b;
+  --ink-muted: #6b6f76;
+
+  --amber: #ffb020;
+  --amber-deep: #b97400;
+  --amber-glow: rgba(255, 176, 32, 0.55);
+
+  --citation: #c23b32;
+  --citation-bg: #fbeae8;
+  --pergreen: #2f7a4d;
+  --pergreen-bg: #e9f4ec;
+  --permit-blue: #2b5fa5;
+  --permit-blue-bg: #e8eef7;
+  --neutral-bg: #eceae5;
+
   --radius: 8px;
+  --font-display: "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family: var(--font-body);
+  background: var(--concrete);
+  color: var(--ink);
   line-height: 1.5;
+  font-size: 15px;
 }
 
-a { color: var(--primary); text-decoration: none; }
+a { color: var(--permit-blue); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+:focus-visible {
+  outline: 2px solid var(--amber-deep);
+  outline-offset: 2px;
+}
+
+/* =====================================================
+   Masthead
+   ===================================================== */
 .topbar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--asphalt);
+  border-bottom: 3px solid var(--amber);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
 .topbar-inner {
-  max-width: 1100px;
+  max-width: 1140px;
   margin: 0 auto;
-  padding: 0.75rem 1.25rem;
+  padding: 0.7rem 1.25rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.75rem;
   flex-wrap: wrap;
 }
 
 .brand {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   white-space: nowrap;
 }
 .brand:hover { text-decoration: none; }
 
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 5px;
+  background: var(--amber);
+  color: var(--asphalt);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  line-height: 1;
+  padding-top: 0.1rem;
+}
+
+.brand-text {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  letter-spacing: 0.03em;
+  color: #f2f1ee;
+  text-transform: uppercase;
+}
+.brand-text strong { color: var(--amber); font-weight: 400; }
+
 .nav {
   display: flex;
-  gap: 1rem;
+  gap: 1.35rem;
   flex-wrap: wrap;
   flex: 1;
 }
-.nav a { color: var(--text-muted); font-weight: 500; font-size: 0.92rem; }
-.nav a:hover { color: var(--primary); text-decoration: none; }
-
-.act-as { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
-.act-as select {
-  padding: 0.3rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  font-size: 0.85rem;
-  max-width: 220px;
+.nav a {
+  color: #c7c9cd;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0;
+  border-bottom: 2px solid transparent;
+}
+.nav a:hover {
+  color: var(--amber);
+  text-decoration: none;
+  border-bottom-color: var(--amber);
 }
 
+.act-as {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9a9da2;
+  background: var(--asphalt-2);
+  border: 1px solid #3a3e42;
+  border-radius: 999px;
+  padding: 0.3rem 0.4rem 0.3rem 0.85rem;
+}
+.act-as select {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: #f2f1ee;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-family: var(--font-body);
+  max-width: 200px;
+}
+
+/* =====================================================
+   Page shell
+   ===================================================== */
 .page {
-  max-width: 1100px;
+  max-width: 1140px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 3rem;
+  padding: 1.75rem 1.25rem 3rem;
 }
 
 .footer {
   text-align: center;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  padding: 1.5rem;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  padding: 1.75rem;
+  font-family: var(--font-mono);
 }
 
-h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
-h2 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
-.subtitle { color: var(--text-muted); margin: 0 0 1.5rem; }
+h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 0 0 0.2rem;
+  color: var(--ink);
+}
+h2 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 2.25rem 0 0.85rem;
+  padding-left: 0.65rem;
+  border-left: 4px solid var(--amber);
+}
+.subtitle { color: var(--ink-muted); margin: 0 0 1.5rem; }
 
 .page-header {
   display: flex;
@@ -99,19 +198,112 @@ h2 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
   margin-bottom: 1.25rem;
 }
 
+/* =====================================================
+   Flash messages
+   ===================================================== */
 .flashes { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
-.flash { padding: 0.65rem 1rem; border-radius: var(--radius); font-size: 0.92rem; }
-.flash-success { background: var(--success-bg); color: var(--success-text); }
-.flash-error { background: var(--error-bg); color: var(--error-text); }
-.flash-info { background: var(--info-bg); color: var(--info-text); }
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+.flash {
+  padding: 0.65rem 1rem;
   border-radius: var(--radius);
-  padding: 1.25rem;
+  font-size: 0.92rem;
+  border-left: 3px solid transparent;
+}
+.flash-success { background: var(--pergreen-bg); color: var(--pergreen); border-left-color: var(--pergreen); }
+.flash-error { background: var(--citation-bg); color: var(--citation); border-left-color: var(--citation); }
+.flash-info { background: var(--permit-blue-bg); color: var(--permit-blue); border-left-color: var(--permit-blue); }
+
+/* =====================================================
+   Signature element: garage entrance signage boards
+   ===================================================== */
+.signage-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
+.signage-board {
+  background: var(--asphalt);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem 1rem;
+  border: 1px solid var(--asphalt-2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.signage-board__value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 2.4rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--amber);
+  text-shadow: 0 0 10px var(--amber-glow), 0 0 2px var(--amber-glow);
+}
+
+.signage-board__label {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #9a9da2;
+  margin-top: 0.35rem;
+}
+
+.signage-board--primary {
+  border-color: var(--amber-deep);
+  box-shadow: inset 0 0 0 1px var(--amber-deep);
+}
+.signage-board--primary .signage-board__value { font-size: 2.7rem; }
+
+.signage-board--alert .signage-board__value {
+  color: #ff6b5e;
+  text-shadow: 0 0 10px rgba(255, 107, 94, 0.55), 0 0 2px rgba(255, 107, 94, 0.55);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .signage-board__value { animation: signage-flicker 2.6s ease-in-out 1; }
+}
+@keyframes signage-flicker {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  10% { opacity: 0.4; }
+  13% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* =====================================================
+   Zone chips — permit-type color coding, echoing
+   real color-coded campus permit-zone signage.
+   ===================================================== */
+.zone-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.5rem;
+  padding: 0 0.35rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  background: var(--neutral-bg);
+  color: var(--ink-muted);
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+.zone-chip[data-zone="A"] { background: var(--permit-blue-bg); color: var(--permit-blue); }
+.zone-chip[data-zone="B"] { background: #efeaf6; color: #6a4c93; }
+.zone-chip[data-zone="C"] { background: var(--pergreen-bg); color: var(--pergreen); }
+.zone-chip[data-zone="D"] { background: #fbf0dd; color: var(--amber-deep); }
+.zone-chip[data-zone="E"] { background: #f3e7de; color: #8b4a2b; }
+.zone-chip[data-zone="F"] { background: #e3f3f1; color: #1f7a72; }
+.zone-chip[data-zone="VIS"] { background: var(--citation-bg); color: var(--citation); }
+
+/* =====================================================
+   Stat grid (legacy — kept for any non-dashboard usage)
+   ===================================================== */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -119,112 +311,188 @@ h2 { font-size: 1.15rem; margin: 2rem 0 0.75rem; }
   margin-bottom: 2rem;
 }
 .stat {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--chalk);
+  border: 1px solid var(--concrete-line);
   border-radius: var(--radius);
   padding: 1rem 1.25rem;
 }
-.stat .value { font-size: 1.6rem; font-weight: 700; }
-.stat .label { color: var(--text-muted); font-size: 0.85rem; }
+.stat .value { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 600; }
+.stat .label { color: var(--ink-muted); font-size: 0.85rem; }
 
+/* =====================================================
+   Tables — ledger style: hairlines, mono headers/numbers
+   ===================================================== */
 table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--chalk);
+  border: 1px solid var(--concrete-line);
   border-radius: var(--radius);
   overflow: hidden;
 }
 th, td {
   text-align: left;
-  padding: 0.65rem 0.85rem;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.92rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--concrete-line);
+  font-size: 0.9rem;
 }
-th { background: #fafbfc; color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.02em; }
+th {
+  background: #faf9f6;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 tr:last-child td { border-bottom: none; }
-.table-wrap { overflow-x: auto; }
+tr:hover td { background: #fbfaf7; }
+.table-wrap { overflow-x: auto; border-radius: var(--radius); }
 
+/* =====================================================
+   Status badges
+   ===================================================== */
 .badge {
   display: inline-block;
-  padding: 0.15rem 0.55rem;
+  padding: 0.18rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.badge-Available, .badge-Active, .badge-success { background: var(--success-bg); color: var(--success-text); }
-.badge-Occupied, .badge-Expired, .badge-error { background: var(--error-bg); color: var(--error-text); }
-.badge-Reserved, .badge-Pending, .badge-Upcoming, .badge-info { background: var(--info-bg); color: var(--info-text); }
-.badge-Cancelled, .badge-Completed { background: #eceef1; color: var(--text-muted); }
+.badge-Available, .badge-Active { background: var(--pergreen-bg); color: var(--pergreen); }
+.badge-Occupied, .badge-Expired { background: var(--citation-bg); color: var(--citation); }
+.badge-Reserved, .badge-Pending, .badge-Upcoming { background: var(--permit-blue-bg); color: var(--permit-blue); }
+.badge-Cancelled, .badge-Completed { background: var(--neutral-bg); color: var(--ink-muted); }
 
+/* Ticket paid/unpaid: a small nod to a citation stamp,
+   used only here so it stays a signature, not a gimmick. */
+.badge-success, .badge-error {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  border-radius: 3px;
+  padding: 0.2rem 0.55rem 0.1rem;
+  transform: rotate(-2deg);
+  display: inline-block;
+  border: 1.5px solid currentColor;
+}
+.badge-success { background: var(--pergreen-bg); color: var(--pergreen); }
+.badge-error { background: var(--citation-bg); color: var(--citation); }
+
+/* =====================================================
+   Filters
+   ===================================================== */
 .filters {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
   align-items: end;
   margin-bottom: 1.25rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--chalk);
+  border: 1px solid var(--concrete-line);
   border-radius: var(--radius);
   padding: 1rem;
 }
-.filters .field { display: flex; flex-direction: column; gap: 0.25rem; }
-.filters label { font-size: 0.78rem; color: var(--text-muted); }
+.filters .field { display: flex; flex-direction: column; gap: 0.3rem; }
+.filters label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+}
 
+/* =====================================================
+   Buttons
+   ===================================================== */
 .btn {
   display: inline-block;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.1rem;
   border-radius: 6px;
   border: 1px solid transparent;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 600;
+  background: var(--amber);
+  color: var(--asphalt);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   cursor: pointer;
 }
-.btn:hover { background: var(--primary-hover); text-decoration: none; }
-.btn-sm { padding: 0.3rem 0.65rem; font-size: 0.82rem; }
-.btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
-.btn-secondary:hover { background: #f2f3f5; }
-.btn-danger { background: var(--error-bg); color: var(--error-text); border-color: #f2c9c3; }
-.btn-danger:hover { background: #f7d8d4; }
+.btn:hover { background: var(--amber-deep); color: #fff; text-decoration: none; }
+.btn-sm { padding: 0.28rem 0.65rem; font-size: 0.82rem; }
+.btn-secondary { background: var(--chalk); color: var(--ink); border-color: var(--concrete-line); }
+.btn-secondary:hover { background: var(--concrete); color: var(--ink); }
+.btn-danger { background: var(--citation-bg); color: var(--citation); border-color: #f0c7c2; }
+.btn-danger:hover { background: var(--citation); color: #fff; }
 .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
 form.inline { display: inline; }
 
+/* =====================================================
+   Forms
+   ===================================================== */
 .form-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--chalk);
+  border: 1px solid var(--concrete-line);
   border-radius: var(--radius);
   padding: 1.5rem;
   max-width: 560px;
 }
-.form-row { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
-.form-row label { font-size: 0.85rem; font-weight: 600; }
-.form-row .hint { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
+.form-row { margin-bottom: 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.form-row label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+}
+.form-row .hint { font-size: 0.78rem; color: var(--ink-muted); font-weight: 400; text-transform: none; letter-spacing: normal; font-family: var(--font-body); }
+
 input, select, textarea {
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--concrete-line);
   border-radius: 6px;
   font-size: 0.92rem;
-  font-family: inherit;
-  background: var(--surface);
-  color: var(--text);
+  font-family: var(--font-body);
+  background: var(--chalk);
+  color: var(--ink);
 }
-.checkbox-row { flex-direction: row; align-items: center; gap: 0.5rem; }
-.checkbox-row label { font-weight: 500; }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--amber-deep);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 176, 32, 0.25);
+}
 
+.checkbox-row { flex-direction: row; align-items: center; gap: 0.5rem; }
+.checkbox-row label { text-transform: none; font-family: var(--font-body); font-size: 0.9rem; letter-spacing: normal; }
+
+/* =====================================================
+   Misc
+   ===================================================== */
 .empty-state {
   text-align: center;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   padding: 2.5rem 1rem;
-  background: var(--surface);
-  border: 1px dashed var(--border);
+  background: var(--chalk);
+  border: 1px dashed var(--concrete-line);
   border-radius: var(--radius);
 }
 
 .error-page { text-align: center; padding: 4rem 1rem; }
-.error-page h1 { font-size: 2rem; }
+.error-page h1 { font-size: 2.2rem; }
 
-.muted { color: var(--text-muted); }
+.muted { color: var(--ink-muted); }
 .text-right { text-align: right; }
+
+/* =====================================================
+   Responsive
+   ===================================================== */
+@media (max-width: 640px) {
+  .topbar-inner { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .nav { gap: 0.9rem; }
+  .signage-row { grid-template-columns: repeat(2, 1fr); }
+  h1 { font-size: 1.6rem; }
+}
