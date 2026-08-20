@@ -1,4 +1,13 @@
 -- =====================================================
+-- EXTENSIONS
+-- =====================================================
+
+-- Required for the EXCLUDE USING gist constraint on reservations below,
+-- which needs a GiST-compatible equality operator class for int (spot_id)
+-- to combine with the range-overlap operator.
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- =====================================================
 -- TABLES
 -- =====================================================
 
@@ -81,6 +90,15 @@ CREATE TABLE permits (
 );
 
 -- Reservations can be made for specific time slots and are linked to users, vehicles, and parking spots. They can also be associated with parking sessions and permits.
+-- The EXCLUDE constraint below is what actually prevents double-booking a
+-- spot, at the database level, for any two overlapping [start_time, end_time)
+-- windows -- whether the row is inserted through make_reservation() or by a
+-- direct INSERT. Unlike an application-level check-then-insert (which has a
+-- race window between the check and the insert), Postgres enforces EXCLUDE
+-- constraints the same way it enforces UNIQUE: the second of two concurrent
+-- conflicting inserts blocks until the first commits or rolls back, and then
+-- fails outright if the first one committed. Cancelled reservations are
+-- exempt (WHERE clause) since a cancelled booking should free the slot.
 CREATE TABLE reservations (
     reservation_id SERIAL PRIMARY KEY,
     start_time TIMESTAMP NOT NULL,
@@ -94,7 +112,11 @@ CREATE TABLE reservations (
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
     FOREIGN KEY (spot_id) REFERENCES spots(spot_id),
-    CHECK (end_time >= start_time)
+    CHECK (end_time >= start_time),
+    EXCLUDE USING gist (
+        spot_id WITH =,
+        tsrange(start_time, end_time, '[)') WITH &&
+    ) WHERE (status <> 'Cancelled')
 );
 
 -- Parking sessions represent the actual parking events and are linked to users, vehicles, parking spots, reservations, and permits. They track the start and end times of parking, as well as the status of the session.
@@ -245,14 +267,25 @@ $$ LANGUAGE plpgsql;
 --   3. The spot must exist in spots.
 --   4. The spot must be reservable.
 --   5. start_time must be before end_time.
---   6. The spot must not already have an overlapping
---      reservation for the requested time.
+--   6. The spot must not already have an overlapping,
+--      non-cancelled reservation for the requested time.
 -- POST-CONDITIONS:
 --   1. A new row is inserted into reservations.
 --   2. The reservation is linked to the given user,
 --      vehicle, and spot.
 --   3. The spot status may be updated to 'Reserved'.
 --   4. The function returns the new reservation_id.
+-- NOTE ON CONCURRENCY:
+--   The overlap check below is a fast-path that gives a clean error
+--   for the common case, but it is NOT what makes double-booking
+--   impossible -- it still has a check-then-insert race window like
+--   any other check. What actually guarantees correctness under
+--   concurrent calls is the reservations_no_overlap EXCLUDE
+--   constraint on the reservations table itself (see createDDL.sql).
+--   If two sessions both pass the check above for the same spot and
+--   overlapping times, only one INSERT can win; the other hits that
+--   constraint and is turned back into the same friendly error by
+--   the EXCEPTION block below instead of a raw exclusion_violation.
 -- ----------------------------------------------------
 CREATE OR REPLACE FUNCTION make_reservation(
     p_start_time TIMESTAMP,
@@ -286,11 +319,12 @@ BEGIN
         RAISE EXCEPTION 'Spot is not reservable';
     END IF;
 
-    -- check overlap
+    -- check overlap (fast-path only -- see NOTE ON CONCURRENCY above)
     SELECT COUNT(*)
     INTO overlap_count
     FROM reservations
     WHERE spot_id = p_spot_id
+      AND status <> 'Cancelled'
       AND p_start_time < end_time
       AND p_end_time > start_time;
 
@@ -298,23 +332,28 @@ BEGIN
         RAISE EXCEPTION 'Spot already reserved for that time';
     END IF;
 
-    INSERT INTO reservations (
-        start_time,
-        end_time,
-        status,
-        user_id,
-        vehicle_id,
-        spot_id
-    )
-    VALUES (
-        p_start_time,
-        p_end_time,
-        p_status,
-        p_user_id,
-        p_vehicle_id,
-        p_spot_id
-    )
-    RETURNING reservation_id INTO new_reservation_id;
+    BEGIN
+        INSERT INTO reservations (
+            start_time,
+            end_time,
+            status,
+            user_id,
+            vehicle_id,
+            spot_id
+        )
+        VALUES (
+            p_start_time,
+            p_end_time,
+            p_status,
+            p_user_id,
+            p_vehicle_id,
+            p_spot_id
+        )
+        RETURNING reservation_id INTO new_reservation_id;
+    EXCEPTION
+        WHEN exclusion_violation THEN
+            RAISE EXCEPTION 'Spot already reserved for that time';
+    END;
 
     UPDATE spots
     SET current_status = 'Reserved'

@@ -1,11 +1,26 @@
 -- =====================================================
 -- Filename: transaction.sql
 -- Project:  UMBC Parking Management System
--- Descr:    Demo Demonstrating how to Prevent Deadlocks using Double Booking.
+-- Descr:    Demonstrates that the reservations_spot_id_tsrange_excl
+--           EXCLUDE constraint (see createDDL.sql) prevents
+--           double-booking a spot at the database level -- even when
+--           the caller uses the exact same naive "check for overlap,
+--           then insert" pattern that used to be unsafe, with no
+--           manual locking (no SELECT ... FOR UPDATE, no
+--           application-level mutex).
+--
+--           Before this constraint existed, two sessions running that
+--           pattern concurrently could both pass their overlap check
+--           (each seeing a stale, pre-commit view of the table) and
+--           both insert, producing two reservations for the same spot
+--           and the same time. The EXCLUDE constraint makes that
+--           outcome impossible: Postgres enforces it the same way it
+--           enforces UNIQUE -- whichever of two conflicting concurrent
+--           inserts commits second is rejected outright.
 -- =====================================================
 -- =====================================================
 -- SECTION 0: SETUP
--- Run this once before the demo.
+-- Run this once before the demo. Safe to re-run.
 -- =====================================================
 -- Clean up old demo data if this file was run before.
 DELETE FROM public.reservations
@@ -96,286 +111,205 @@ VALUES
   (102, 'T002', 'Honda', 'Civic', 'Red', 102);
 
 -- =====================================================
--- SECTION 1: CONCURRENCY PROBLEM
--- Problem: Double booking
+-- SECTION 1: BASELINE -- ONE SESSION, TWO OVERLAPPING INSERTS
+-- No second session needed for this part. Run it as one block in
+-- pgAdmin or psql to see the constraint reject an overlapping
+-- reservation immediately, inside a single transaction.
+-- =====================================================
+/*
+BEGIN;
+
+INSERT INTO reservations (
+  reservation_id, start_time, end_time, status, user_id, vehicle_id, spot_id
+) VALUES (
+  801, TIMESTAMP '2026-05-14 09:00:00', TIMESTAMP '2026-05-14 11:00:00',
+  'Active', 101, 101, 99
+);
+
+-- Overlaps the row above. Postgres can see the first row was inserted
+-- in this same transaction, so this fails immediately.
+INSERT INTO reservations (
+  reservation_id, start_time, end_time, status, user_id, vehicle_id, spot_id
+) VALUES (
+  802, TIMESTAMP '2026-05-14 10:00:00', TIMESTAMP '2026-05-14 12:00:00',
+  'Active', 102, 102, 99
+);
+-- Expected: ERROR: conflicting key value violates exclusion constraint
+--   "reservations_spot_id_tsrange_excl"
+
+ROLLBACK;
+*/
+
+-- =====================================================
+-- SECTION 2: THE REAL TEST -- TWO CONCURRENT SESSIONS,
+-- NO MANUAL LOCKING
 --
--- Both users try to reserve spot T-001 within the same
---      time interval (9 AM to 11 AM).
+-- This reproduces the exact scenario that used to cause double
+-- booking before the EXCLUDE constraint existed: both sessions run
+-- the SAME naive "check for overlap, then insert" pattern, with no
+-- SELECT ... FOR UPDATE and no other manual locking.
+--
+-- Both sessions try to reserve spot T-001 (spot_id 99) for
+-- 2026-05-15 09:00 to 11:00.
 --
 -- Expected result:
---      Both sessions succeed.
---      This creates TWO reservations for the same spot and same time.
---
--- =====================================================
--- -----------------------------------------------------
--- SECTION 1a: UNSAFE VERSION
--- Description: An event of what occurs when two users reserve a parking
---                  spot at the same time without Two Phase Locking.
+--   Exactly ONE session's reservation is committed.
+--   The other session's overlap check still reports 0 (a genuinely
+--   stale read -- the winning session had not committed yet when the
+--   loser checked) but its INSERT is rejected with a real
+--   exclusion_violation instead of silently succeeding. Whichever
+--   session commits first wins; that is expected and fine -- the
+--   point is that it is never both.
 --
 -- Instructions:
---      1) Run the code within Session 1 in pgAdmin Query Tool.
---      2) Don't close the previous session, and create a new query tool session
---              to run the code in Session 2.
--- -----------------------------------------------------
+--      1) Run the Session 1 block in a pgAdmin Query Tool tab.
+--      2) While Session 1 is inside pg_sleep(15), open a second Query
+--              Tool tab and run the Session 2 block.
+--      3) Run SECTION 2 VERIFY after both sessions have finished.
+-- =====================================================
 -- -----------------------------------------------------
 -- Session 1:
 -- -----------------------------------------------------
 /*
 BEGIN;
 
--- Check if the spot is already reserved.
+-- Naive overlap check -- no locking. This is exactly the pattern
+-- that used to be unsafe.
 SELECT COUNT(*) AS overlapping_reservations
 FROM reservations
 WHERE spot_id = 99
-AND TIMESTAMP '2026-05-15 11:00:00' <= end_time
-AND TIMESTAMP '2026-05-15 09:00:00' >= start_time;
+  AND status <> 'Cancelled'
+  AND TIMESTAMP '2026-05-15 11:00:00' > start_time
+  AND TIMESTAMP '2026-05-15 09:00:00' < end_time;
 
--- This process waits, so that the User can run Section 2 within pgAdmin.
+-- Give Session 2 time to run its own stale overlap check before
+-- Session 1 commits.
 SELECT pg_sleep(15);
 
--- Guest 1 (James) reserves the Parking Spot w/ id = 99 within Lot 901.
 INSERT INTO reservations (
-reservation_id,
-start_time,
-end_time,
-status,
-user_id,
-vehicle_id,
-spot_id
-)
-VALUES (
-901,
-TIMESTAMP '2026-05-15 09:00:00',
-TIMESTAMP '2026-05-15 11:00:00',
-'Active',
-101,
-101,
-99
+  reservation_id, start_time, end_time, status, user_id, vehicle_id, spot_id
+) VALUES (
+  901, TIMESTAMP '2026-05-15 09:00:00', TIMESTAMP '2026-05-15 11:00:00',
+  'Active', 101, 101, 99
 );
 
 COMMIT;
 */
 -- -----------------------------------------------------
 -- Session 2:
+-- Run this while Session 1 is inside pg_sleep(15).
 -- -----------------------------------------------------
 /*
 BEGIN;
 
--- Session 2 checks whether the spot is already reserved.
--- It will likely see 0 because Session 1 has not inserted yet.
+-- This overlap check will report 0 -- Session 1 has not committed
+-- yet, so this is a genuinely stale read, same as it would have been
+-- before the EXCLUDE constraint existed.
 SELECT COUNT(*) AS overlapping_reservations
 FROM reservations
 WHERE spot_id = 99
-AND TIMESTAMP '2026-05-15 09:00:00' <= end_time
-AND TIMESTAMP '2026-05-15 11:00:00' >= start_time;
+  AND status <> 'Cancelled'
+  AND TIMESTAMP '2026-05-15 09:00:00' < end_time
+  AND TIMESTAMP '2026-05-15 11:00:00' > start_time;
 
--- Guest 2 (Jordan) reserves the Parking Spot w/ id = 99 within Lot 901.
+-- This INSERT is what actually gets stopped: it either commits first
+-- (if this session reaches it before Session 1 commits), or it
+-- blocks until Session 1 finishes and then fails with
+-- exclusion_violation if Session 1 committed first.
 INSERT INTO reservations (
-reservation_id,
-start_time,
-end_time,
-status,
-user_id,
-vehicle_id,
-spot_id
-)
-VALUES (
-902,
-TIMESTAMP '2026-05-15 09:00:00',
-TIMESTAMP '2026-05-15 11:00:00',
-'Active',
-102,
-102,
-99
+  reservation_id, start_time, end_time, status, user_id, vehicle_id, spot_id
+) VALUES (
+  902, TIMESTAMP '2026-05-15 09:00:00', TIMESTAMP '2026-05-15 11:00:00',
+  'Active', 102, 102, 99
 );
 
 COMMIT;
+
+-- If this session errors out, pgAdmin may leave the transaction open.
+-- Run ROLLBACK; if needed.
 */
 -- -----------------------------------------------------
--- SECTION 1b: VERIFY DOUBLE BOOKING
--- Descr: Run this after Session 1 and Session 2 both commit.
---          The count should be 2.
+-- SECTION 2 VERIFY
+-- Descr: Run this after both Session 1 and Session 2 have finished
+--        (one committed, the other should have errored out).
+--        The count should be 1, never 2.
 -- -----------------------------------------------------
 /*
 SELECT
-spot_id,
-start_time,
-end_time,
-COUNT(*) AS number_of_reservations
+  spot_id,
+  start_time,
+  end_time,
+  COUNT(*) AS number_of_reservations
 FROM reservations
 WHERE spot_id = 99
-AND start_time = TIMESTAMP '2026-05-15 09:00:00'
-AND end_time = TIMESTAMP '2026-05-15 11:00:00'
+  AND start_time = TIMESTAMP '2026-05-15 09:00:00'
+  AND end_time = TIMESTAMP '2026-05-15 11:00:00'
 GROUP BY spot_id, start_time, end_time;
 
 SELECT
-reservation_id,
-start_time,
-end_time,
-status,
-user_id,
-vehicle_id,
-spot_id
+  reservation_id,
+  start_time,
+  end_time,
+  status,
+  user_id,
+  vehicle_id,
+  spot_id
 FROM reservations
 WHERE spot_id = 99
-AND start_time = TIMESTAMP '2026-05-15 09:00:00'
-AND end_time = TIMESTAMP '2026-05-15 11:00:00'
+  AND start_time = TIMESTAMP '2026-05-15 09:00:00'
+  AND end_time = TIMESTAMP '2026-05-15 11:00:00'
 ORDER BY reservation_id;
 */
+
 -- =====================================================
--- SECTION 2: PREVENTING DEADLOCK
--- Solution: SELECT ... FOR UPDATE
+-- SECTION 3: SAME PROTECTION THROUGH make_reservation()
 --
--- Desired Outcome:
---      The first session locks the spot row.
---      The second session must wait.
---      After the first session commits, the second session checks again
---      and fails because the reservation already exists.
+-- Confirms that a caller using the actual application entry point
+-- (make_reservation(), rather than a raw INSERT) gets the same
+-- protection, and that the losing call sees the friendly application
+-- error message ('Spot already reserved for that time') instead of a
+-- raw Postgres exclusion_violation -- see the EXCEPTION block inside
+-- make_reservation() in createDDL.sql.
 --
--- Both users try to reserve spot T-001 at:
---      2026-05-16 09:00 to 11:00
---
--- Expected result:
---      Session 1 succeeds.
---      Session 2 blocks, then fails.
+-- Both calls try to reserve spot T-001 for 2026-05-16 09:00 to 11:00.
+-- Run Session 1's call, then Session 2's call (a second pgAdmin tab
+-- is optional here since neither call sleeps, but using one still
+-- works).
 -- =====================================================
 -- -----------------------------------------------------
--- SECTION 2 CLEANUP
--- Reset the database for a clean test.
+-- SECTION 3 CLEANUP
+-- Reset the database for a clean re-run of this section.
 -- -----------------------------------------------------
 /*
 DELETE FROM reservations
 WHERE spot_id = 99
-AND start_time = TIMESTAMP '2026-05-16 09:00:00'
-AND end_time = TIMESTAMP '2026-05-16 11:00:00';
+  AND start_time = TIMESTAMP '2026-05-16 09:00:00'
+  AND end_time = TIMESTAMP '2026-05-16 11:00:00';
 */
 -- -----------------------------------------------------
 -- Session 1:
 -- -----------------------------------------------------
 /*
-BEGIN;
-
--- Lock the parking spot row.
--- Any other transaction trying to lock this same spot must wait!!!
-SELECT spot_id
-FROM spots
-WHERE spot_id = 99
-FOR UPDATE;
-
--- Keep the lock open so the blocking behavior is visible.
-SELECT pg_sleep(15);
-
--- Insert reservation for Guest 1 (James).
-INSERT INTO reservations (
-reservation_id,
-start_time,
-end_time,
-status,
-user_id,
-vehicle_id,
-spot_id
-)
-VALUES (
-903,
-TIMESTAMP '2026-05-16 09:00:00',
-TIMESTAMP '2026-05-16 11:00:00',
-'Active',
-101,
-101,
-99
+SELECT make_reservation(
+  TIMESTAMP '2026-05-16 09:00:00',
+  TIMESTAMP '2026-05-16 11:00:00',
+  'Active',
+  101,
+  101,
+  99
 );
-
-COMMIT;
 */
 -- -----------------------------------------------------
--- SECTION 2B: SAFE VERSION - SESSION 2
--- Run this in pgAdmin Query Tool window #2 while Session 1 is sleeping.
---
--- This should BLOCK at SELECT ... FOR UPDATE.
--- After Session 1 commits, this continues.
--- Then it should FAIL with:
---   ERROR: Spot already reserved for that time
+-- Session 2:
 -- -----------------------------------------------------
 /*
-BEGIN;
-
--- This line blocks until Session 1 commits.
-SELECT spot_id
-FROM spots
-WHERE spot_id = 99
-FOR UPDATE;
-
--- After Session 1 commits, Session 2 checks again.
-DO $$
-DECLARE
-overlap_count INT;
-BEGIN
-SELECT COUNT(*)
-INTO overlap_count
-FROM reservations
-WHERE spot_id = 99
-AND TIMESTAMP '2026-05-16 09:00:00' < end_time
-AND TIMESTAMP '2026-05-16 11:00:00' > start_time;
-
-IF overlap_count > 0 THEN
-RAISE EXCEPTION 'Spot already reserved for that time';
-END IF;
-END;
-$$;
-
--- This insert should not run if the DO block fails.
-INSERT INTO reservations (
-reservation_id,
-start_time,
-end_time,
-status,
-user_id,
-vehicle_id,
-spot_id
-)
-VALUES (
-904,
-TIMESTAMP '2026-05-16 09:00:00',
-TIMESTAMP '2026-05-16 11:00:00',
-'Active',
-102,
-102,
-99
+SELECT make_reservation(
+  TIMESTAMP '2026-05-16 09:00:00',
+  TIMESTAMP '2026-05-16 11:00:00',
+  'Active',
+  102,
+  102,
+  99
 );
-
-COMMIT;
-
--- If pgAdmin leaves the transaction open after the error, run:
--- ROLLBACK;
-*/
--- -----------------------------------------------------
--- SECTION 2b: VERIFY PREVENTION
--- Descr: Run this section of code after running all the code below Section 2a.
---          We expect that the SEARCH query should return 1 reservation.
--- -----------------------------------------------------
-/*
-SELECT
-spot_id,
-start_time,
-end_time,
-COUNT(*) AS number_of_reservations
-FROM reservations
-WHERE spot_id = 99
-AND start_time = TIMESTAMP '2026-05-16 09:00:00'
-AND end_time = TIMESTAMP '2026-05-16 11:00:00'
-GROUP BY spot_id, start_time, end_time;
-
-SELECT
-reservation_id,
-start_time,
-end_time,
-status,
-user_id,
-vehicle_id,
-spot_id
-FROM reservations
-WHERE spot_id = 99
-AND start_time = TIMESTAMP '2026-05-16 09:00:00'
-AND end_time = TIMESTAMP '2026-05-16 11:00:00'
-ORDER BY reservation_id;
+-- Expected: ERROR: Spot already reserved for that time
 */

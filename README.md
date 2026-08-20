@@ -303,21 +303,21 @@ To exit `psql`, run:
 
 ## Running the Concurrency Test in pgAdmin
 
-The concurrency test in `transaction.sql` demonstrates a double-booking problem and then shows how `SELECT ... FOR UPDATE` prevents it.
+Double-booking a spot is prevented at the database level by an `EXCLUDE` constraint on `reservations` (`reservations_spot_id_tsrange_excl`, defined in `createDDL.sql`), not by application logic alone. `transaction.sql` demonstrates this: two sessions race to reserve the same spot for the same time window using the same "check for overlap, then insert" pattern, with **no** manual locking (no `SELECT ... FOR UPDATE`). Before the constraint existed, this pattern could double-book a spot. With it in place, only one session's reservation is ever committed.
 
 To run the test:
 
 1. Run `dropDDL.sql`, `createDDL.sql`, and `loadAll.sql`.
-2. Run the setup portion of `transaction.sql`.
+2. Run the Section 0 setup portion of `transaction.sql`.
 3. Open pgAdmin.
 4. Open the `umbc_parking` database.
 5. Open two separate Query Tool tabs or windows.
 6. Use one tab as Session 1 and the other tab as Session 2.
-7. Copy the Session 1 code block from `transaction.sql` into the first Query Tool tab.
-8. Copy the Session 2 code block from `transaction.sql` into the second Query Tool tab.
-9. Run Session 1 first, then quickly run Session 2 while Session 1 is sleeping.
+7. Copy the Section 2 Session 1 code block from `transaction.sql` into the first Query Tool tab and run it.
+8. While Session 1 is inside `pg_sleep(15)`, copy the Section 2 Session 2 code block into the second Query Tool tab and run it.
+9. Run the Section 2 verify block afterward — it should show exactly **one** reservation, never two.
 
-The unsafe test should show two reservations for the same spot and time. The safe test should show Session 2 blocking and then failing after Session 1 commits.
+`transaction.sql` also includes a Section 1 baseline (a single session trying to insert two overlapping reservations, rejected immediately) and a Section 3 test showing the same protection through the `make_reservation()` function, where the losing call gets the friendly `'Spot already reserved for that time'` error instead of a raw Postgres exception.
 
 ## Connection Instructions
 
