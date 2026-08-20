@@ -43,7 +43,8 @@ ORDER BY vehicle_count DESC;
 -- -----------------------------------------------------
 SELECT
     p.permit_id,
-    p.permit_type,
+    pt.code AS parking_type_code,
+    pt.info AS parking_type_info,
     p.valid_from,
     p.valid_to,
     u.first_name,
@@ -51,6 +52,8 @@ SELECT
 FROM permits p
 JOIN users u
     ON p.user_id = u.user_id
+JOIN parkingTypes pt
+    ON p.parking_type_id = pt.parking_type_id
 WHERE CURRENT_DATE BETWEEN p.valid_from AND p.valid_to
 ORDER BY p.valid_to;
 
@@ -123,7 +126,7 @@ SELECT
     s.spot_label,
     l.lot_name,
     r.status AS reservation_status,
-    p.permit_type
+    pt.code AS permit_parking_type_code
 FROM parkingSessions ps
 JOIN users u
     ON ps.user_id = u.user_id
@@ -137,6 +140,8 @@ LEFT JOIN reservations r
     ON ps.reservation_id = r.reservation_id
 LEFT JOIN permits p
     ON ps.permit_id = p.permit_id
+LEFT JOIN parkingTypes pt
+    ON p.parking_type_id = pt.parking_type_id
 ORDER BY ps.start_time DESC;
 
 -- -----------------------------------------------------

@@ -1,0 +1,9 @@
+.git
+.env
+.gitignore
+__pycache__/
+*.pyc
+sql/
+runner/
+README.md
+LICENSE

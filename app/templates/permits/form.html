@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Issue permit{% endblock %}
+{% block content %}
+<h1>Issue permit</h1>
+<div class="form-card">
+  <form method="post">
+    <div class="form-row">
+      <label for="user_id">User</label>
+      <select id="user_id" name="user_id" required>
+        <option value="">Select a user&hellip;</option>
+        {% for u in users %}
+        <option value="{{ u.user_id }}">{{ u.first_name }} {{ u.last_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="parking_type_id">Parking type</label>
+      <select id="parking_type_id" name="parking_type_id" required onchange="document.getElementById('type_info').value = this.options[this.selectedIndex].text">
+        <option value="">Select a type&hellip;</option>
+        {% for pt in parking_types %}
+        <option value="{{ pt.parking_type_id }}">{{ pt.code }} &ndash; {{ pt.info }}</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" id="type_info" name="type_info">
+    </div>
+    <div class="form-row">
+      <label for="valid_from">Valid from</label>
+      <input id="valid_from" name="valid_from" type="date" required value="{{ today }}">
+    </div>
+    <div class="form-row">
+      <label for="valid_to">Valid to</label>
+      <input id="valid_to" name="valid_to" type="date" required>
+    </div>
+    <div class="btn-row">
+      <button class="btn" type="submit">Issue permit</button>
+      <a class="btn btn-secondary" href="{{ url_for('permits.list_permits') }}">Cancel</a>
+    </div>
+    <p class="hint" style="margin-top:0.75rem;">
+      Blocked if the user already has an overlapping permit of the same type, or if the
+      type's active-permit count has reached its lots' combined capacity.
+    </p>
+  </form>
+</div>
+{% endblock %}

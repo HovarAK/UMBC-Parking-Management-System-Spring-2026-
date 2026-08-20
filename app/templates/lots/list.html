@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Lots{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Lots</h1>
+    <p class="subtitle">{{ lots|length }} lot(s)</p>
+  </div>
+  <a class="btn" href="{{ url_for('lots.new_lot') }}">+ New lot</a>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="search">Search</label>
+    <input id="search" type="text" name="search" value="{{ search }}" placeholder="Name or location">
+  </div>
+  <div class="field">
+    <label for="gated">Gated</label>
+    <select id="gated" name="gated">
+      <option value="" {% if not gated %}selected{% endif %}>Any</option>
+      <option value="true" {% if gated == "true" %}selected{% endif %}>Gated only</option>
+      <option value="false" {% if gated == "false" %}selected{% endif %}>Ungated only</option>
+    </select>
+  </div>
+  <button class="btn btn-secondary" type="submit">Filter</button>
+</form>
+
+{% if lots %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Location</th><th>Gated</th><th>Capacity</th><th>Tracked spots</th><th>Available</th></tr>
+    </thead>
+    <tbody>
+      {% for lot in lots %}
+      <tr>
+        <td><a href="{{ url_for('lots.detail', lot_id=lot.lot_id) }}">{{ lot.lot_name }}</a></td>
+        <td>{{ lot.location }}</td>
+        <td>{{ "Yes" if lot.is_gated else "No" }}</td>
+        <td>{{ lot.capacity }}</td>
+        <td>{{ lot.tracked_spots }}</td>
+        <td>{{ lot.available_spots }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No lots match your filters.</div>
+{% endif %}
+{% endblock %}

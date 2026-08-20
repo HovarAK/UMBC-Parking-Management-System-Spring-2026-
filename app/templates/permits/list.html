@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Permits{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Permits</h1>
+    <p class="subtitle">{{ permits|length }} permit(s)</p>
+  </div>
+  <a class="btn" href="{{ url_for('permits.new_permit') }}">+ Issue permit</a>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="user_id">User</label>
+    <select id="user_id" name="user_id">
+      <option value="">Any</option>
+      {% for u in users %}
+      <option value="{{ u.user_id }}" {% if selected_user_id == u.user_id|string %}selected{% endif %}>{{ u.first_name }} {{ u.last_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="parking_type_id">Parking type</label>
+    <select id="parking_type_id" name="parking_type_id">
+      <option value="">Any</option>
+      {% for pt in parking_types %}
+      <option value="{{ pt.parking_type_id }}" {% if selected_parking_type_id == pt.parking_type_id|string %}selected{% endif %}>{{ pt.code }} &ndash; {{ pt.info }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="" {% if not selected_status %}selected{% endif %}>Any</option>
+      <option value="active" {% if selected_status == "active" %}selected{% endif %}>Active</option>
+      <option value="upcoming" {% if selected_status == "upcoming" %}selected{% endif %}>Upcoming</option>
+      <option value="expired" {% if selected_status == "expired" %}selected{% endif %}>Expired</option>
+    </select>
+  </div>
+  <button class="btn btn-secondary" type="submit">Filter</button>
+</form>
+
+{% if permits %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Type</th><th>User</th><th>Valid from</th><th>Valid to</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for p in permits %}
+      <tr>
+        <td><span class="zone-chip" data-zone="{{ p.type_code }}">{{ p.type_code }}</span> {{ p.type_info }}</td>
+        <td><a href="{{ url_for('users.detail', user_id=p.user_id) }}">{{ p.first_name }} {{ p.last_name }}</a></td>
+        <td>{{ p.valid_from }}</td>
+        <td>{{ p.valid_to }}</td>
+        <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
+        <td>
+          <form class="inline" method="post" action="{{ url_for('permits.revoke_permit', permit_id=p.permit_id) }}"
+                onsubmit="return confirm('Revoke this permit?');">
+            <button class="btn btn-sm btn-danger" type="submit">Revoke</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No permits match your filters.</div>
+{% endif %}
+{% endblock %}

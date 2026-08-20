@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ user.first_name }} {{ user.last_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ user.first_name }} {{ user.last_name }}</h1>
+    <p class="subtitle">{{ user.email }} &middot; {{ user.role_name }} &middot; joined {{ user.created_at }}</p>
+  </div>
+</div>
+
+<h2>Vehicles</h2>
+{% if vehicles %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Plate</th><th>Make</th><th>Model</th><th>Color</th></tr></thead>
+    <tbody>
+      {% for v in vehicles %}
+      <tr><td>{{ v.plate_number }}</td><td>{{ v.make }}</td><td>{{ v.model }}</td><td>{{ v.color }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No vehicles on file.</div>
+{% endif %}
+
+<h2>Permits</h2>
+{% if permits %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Type</th><th>Valid from</th><th>Valid to</th></tr></thead>
+    <tbody>
+      {% for p in permits %}
+      <tr><td><span class="zone-chip" data-zone="{{ p.code }}">{{ p.code }}</span> {{ p.info }}</td><td>{{ p.valid_from }}</td><td>{{ p.valid_to }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No permits on file.</div>
+{% endif %}
+
+<h2>Recent reservations</h2>
+{% if reservations %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>When</th><th>Spot</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for r in reservations %}
+      <tr>
+        <td>{{ r.start_time }} &ndash; {{ r.end_time }}</td>
+        <td>{{ r.spot_label }}</td>
+        <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No reservations on file.</div>
+{% endif %}
+
+<p><a href="{{ url_for('users.list_users') }}">&larr; Back to users</a></p>
+{% endblock %}

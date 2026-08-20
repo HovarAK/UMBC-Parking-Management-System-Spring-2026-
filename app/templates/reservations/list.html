@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Reservations{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Reservations</h1>
+    <p class="subtitle">{{ reservations|length }} reservation(s)</p>
+  </div>
+  <a class="btn" href="{{ url_for('reservations.new_reservation') }}">+ New reservation</a>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">Any</option>
+      {% for s in statuses %}
+      <option value="{{ s }}" {% if selected_status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="lot_id">Lot</label>
+    <select id="lot_id" name="lot_id">
+      <option value="">Any</option>
+      {% for l in lots %}
+      <option value="{{ l.lot_id }}" {% if selected_lot_id == l.lot_id|string %}selected{% endif %}>{{ l.lot_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button class="btn btn-secondary" type="submit">Filter</button>
+</form>
+
+{% if reservations %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>When</th><th>User</th><th>Vehicle</th><th>Spot</th><th>Lot</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for r in reservations %}
+      <tr>
+        <td>{{ r.start_time }} &ndash; {{ r.end_time }}</td>
+        <td>{{ r.first_name }} {{ r.last_name }}</td>
+        <td>{{ r.plate_number }}</td>
+        <td>{{ r.spot_label }}</td>
+        <td>{{ r.lot_name }}</td>
+        <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+        <td>
+          <div class="btn-row">
+            {% if r.status in ("Pending", "Active") %}
+            <form class="inline" method="post" action="{{ url_for('reservations.cancel', reservation_id=r.reservation_id) }}">
+              <button class="btn btn-sm btn-secondary" type="submit">Cancel</button>
+            </form>
+            {% endif %}
+            <form class="inline" method="post" action="{{ url_for('reservations.delete', reservation_id=r.reservation_id) }}"
+                  onsubmit="return confirm('Permanently delete this reservation?');">
+              <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No reservations match your filters.</div>
+{% endif %}
+{% endblock %}

@@ -22,3 +22,30 @@ ON spots (lot_id);
 -- Index 5
 CREATE INDEX idx_tickets_spot_violation
 ON tickets (spot_id, violation_type);
+
+-- Indexes 6-13: remaining FK columns used by queryAll.sql joins/filters
+-- and the views, that weren't already covered by indexes 1-5 above or by
+-- the reservations_spot_id_tsrange_excl GiST index on reservations.
+CREATE INDEX idx_permits_user_id
+ON permits (user_id);
+
+CREATE INDEX idx_tickets_issued_to_user_id
+ON tickets (issued_to_user_id);
+
+CREATE INDEX idx_tickets_issued_by_user_id
+ON tickets (issued_by_user_id);
+
+CREATE INDEX idx_vehicles_user_id
+ON vehicles (user_id);
+
+CREATE INDEX idx_users_role_id
+ON users (role_id);
+
+CREATE INDEX idx_parkingSessions_user_id
+ON parkingSessions (user_id);
+
+CREATE INDEX idx_parkingSessions_reservation_id
+ON parkingSessions (reservation_id);
+
+CREATE INDEX idx_sensorEvents_spot_id
+ON sensorEvents (spot_id);

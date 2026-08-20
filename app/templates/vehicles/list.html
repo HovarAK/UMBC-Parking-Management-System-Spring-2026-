@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Vehicles{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Vehicles</h1>
+    <p class="subtitle">{{ vehicles|length }} vehicle(s)</p>
+  </div>
+  <a class="btn" href="{{ url_for('vehicles.new_vehicle') }}">+ New vehicle</a>
+</div>
+
+<form class="filters" method="get">
+  <div class="field">
+    <label for="search">Search</label>
+    <input id="search" type="text" name="search" value="{{ search }}" placeholder="Plate, make, or model">
+  </div>
+  <button class="btn btn-secondary" type="submit">Filter</button>
+</form>
+
+{% if vehicles %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Plate</th><th>Make</th><th>Model</th><th>Color</th><th>Owner</th><th></th></tr></thead>
+    <tbody>
+      {% for v in vehicles %}
+      <tr>
+        <td>{{ v.plate_number }}</td>
+        <td>{{ v.make }}</td>
+        <td>{{ v.model }}</td>
+        <td>{{ v.color }}</td>
+        <td><a href="{{ url_for('users.detail', user_id=v.user_id) }}">{{ v.first_name }} {{ v.last_name }}</a></td>
+        <td>
+          <form class="inline" method="post" action="{{ url_for('vehicles.delete_vehicle', vehicle_id=v.vehicle_id) }}"
+                onsubmit="return confirm('Delete this vehicle?');">
+            <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No vehicles match your search.</div>
+{% endif %}
+{% endblock %}
