@@ -1,7 +1,9 @@
 -- =====================================================
 -- loadAll.sql
--- UMBC-inspired sample data
--- 10 rows for each table except systemRoles and parkingTypes
+-- UMBC-inspired sample data (fictional, not sourced from real UMBC data)
+-- 10 rows for each table except systemRoles, parkingTypes,
+-- violationRates (all small lookup tables), and spots (40: see the
+-- comment above that INSERT for why).
 -- =====================================================
 
 -- -----------------------------------------------------
@@ -61,24 +63,44 @@ VALUES
   ('VIS', 'Visitor Pay-to-Park');
 
 -- -----------------------------------------------------
--- lots (10)
--- UMBC-inspired lot names
+-- violationRates
+-- canonical fine amount per violation type -- matches the amounts the
+-- tickets seed data below uses, and what auto_ticket_violations() looks
+-- up for the two violation types it currently automates.
 -- -----------------------------------------------------
-INSERT INTO lots (lot_name, location, is_gated)
+INSERT INTO violationRates (violation_type, fine_amount)
 VALUES
-  ('Administration Drive Garage', 'Administration Drive', FALSE),
-  ('Commons Garage', 'Commons Drive', FALSE),
-  ('Walker Avenue Garage', 'Walker Avenue', FALSE),
-  ('Lot 7 Walker Avenue', 'Walker Avenue', FALSE),
-  ('Lot 9', 'Central Campus', FALSE),
-  ('Stadium Lot', 'Retriever Athletics Complex', FALSE),
-  ('Lot 24', 'Chesapeake Arena Area', FALSE),
-  ('Satellite Lot 1', 'South Campus', FALSE),
-  ('Satellite Lot 2', 'South Campus', FALSE),
-  ('Walker Avenue Apartments Lot', 'Walker Avenue Apartments', FALSE);
+  ('No Permit', 75.00),
+  ('Expired Permit', 50.00),
+  ('Unauthorized Spot', 40.00),
+  ('Overtime', 30.00);
 
 -- -----------------------------------------------------
--- spots (10)
+-- lots (10)
+-- UMBC-inspired lot names
+-- capacity is an advertised/planning number, intentionally larger than
+-- the handful of individual spots rows tracked below for each lot (see
+-- the comment on the lots table in createDDL.sql).
+-- -----------------------------------------------------
+INSERT INTO lots (lot_name, location, is_gated, capacity)
+VALUES
+  ('Administration Drive Garage', 'Administration Drive', FALSE, 350),
+  ('Commons Garage', 'Commons Drive', FALSE, 500),
+  ('Walker Avenue Garage', 'Walker Avenue', FALSE, 450),
+  ('Lot 7 Walker Avenue', 'Walker Avenue', FALSE, 200),
+  ('Lot 9', 'Central Campus', FALSE, 180),
+  ('Stadium Lot', 'Retriever Athletics Complex', FALSE, 600),
+  ('Lot 24', 'Chesapeake Arena Area', FALSE, 150),
+  ('Satellite Lot 1', 'South Campus', FALSE, 250),
+  ('Satellite Lot 2', 'South Campus', FALSE, 250),
+  ('Walker Avenue Apartments Lot', 'Walker Avenue Apartments', FALSE, 120);
+
+-- -----------------------------------------------------
+-- spots (40: the original 10, ids/labels/lots unchanged so every
+-- downstream reservation/session/ticket/sensorEvent row below that
+-- references a spot_id by number still points at the same spot, plus 30
+-- more sample spots -- 3 extra per lot -- so each lot has a small but
+-- believable mix of types/status instead of exactly one spot each.
 -- note: parking_type_id references parkingTypes
 -- -----------------------------------------------------
 INSERT INTO spots (
@@ -86,19 +108,62 @@ INSERT INTO spots (
   parking_type_id,
   current_status,
   is_reservable,
+  is_ada,
+  has_ev_charging,
   lot_id
 )
 VALUES
-  ('ADG-V01', 7, 'Available', FALSE, 1),
-  ('CG-V01', 7, 'Occupied', FALSE, 2),
-  ('WAG-V01', 7, 'Available', FALSE, 3),
-  ('L7-V01', 7, 'Available', FALSE, 4),
-  ('L9-V01', 7, 'Occupied', FALSE, 5),
-  ('STAD-A01', 1, 'Available', TRUE, 6),
-  ('L24-D01', 4, 'Reserved', TRUE, 7),
-  ('SAT1-F01', 6, 'Available', TRUE, 8),
-  ('SAT2-F01', 6, 'Occupied', TRUE, 9),
-  ('WAA-B01', 2, 'Reserved', TRUE, 10);
+  -- original 10 (spot_id 1-10, unchanged)
+  ('ADG-V01', 7, 'Available', FALSE, FALSE, FALSE, 1),
+  ('CG-V01', 7, 'Occupied', FALSE, FALSE, FALSE, 2),
+  ('WAG-V01', 7, 'Available', FALSE, FALSE, FALSE, 3),
+  ('L7-V01', 7, 'Available', FALSE, FALSE, FALSE, 4),
+  ('L9-V01', 7, 'Occupied', FALSE, FALSE, FALSE, 5),
+  ('STAD-A01', 1, 'Available', TRUE, FALSE, FALSE, 6),
+  ('L24-D01', 4, 'Reserved', TRUE, FALSE, FALSE, 7),
+  ('SAT1-F01', 6, 'Available', TRUE, FALSE, FALSE, 8),
+  ('SAT2-F01', 6, 'Occupied', TRUE, FALSE, FALSE, 9),
+  ('WAA-B01', 2, 'Reserved', TRUE, FALSE, FALSE, 10),
+  -- Administration Drive Garage (lot 1): faculty/gated-faculty mix
+  ('ADG-D01', 4, 'Available', FALSE, FALSE, FALSE, 1),
+  ('ADG-D02', 4, 'Occupied', FALSE, FALSE, FALSE, 1),
+  ('ADG-E01', 5, 'Available', FALSE, TRUE, FALSE, 1),
+  -- Commons Garage (lot 2): commuter + visitor mix
+  ('CG-A01', 1, 'Available', FALSE, FALSE, FALSE, 2),
+  ('CG-A02', 1, 'Occupied', FALSE, FALSE, FALSE, 2),
+  ('CG-V02', 7, 'Available', FALSE, FALSE, TRUE, 2),
+  -- Walker Avenue Garage (lot 3): apartments + visitor mix
+  ('WAG-B01', 2, 'Available', FALSE, FALSE, FALSE, 3),
+  ('WAG-B02', 2, 'Occupied', FALSE, FALSE, FALSE, 3),
+  ('WAG-V02', 7, 'Available', FALSE, FALSE, FALSE, 3),
+  -- Lot 7 Walker Avenue (lot 4): apartments
+  ('L7-B01', 2, 'Available', FALSE, FALSE, FALSE, 4),
+  ('L7-B02', 2, 'Occupied', FALSE, FALSE, FALSE, 4),
+  ('L7-B03', 2, 'Available', FALSE, TRUE, FALSE, 4),
+  -- Lot 9 (lot 5): commuter
+  ('L9-A01', 1, 'Available', FALSE, FALSE, FALSE, 5),
+  ('L9-A02', 1, 'Occupied', FALSE, FALSE, FALSE, 5),
+  ('L9-A03', 1, 'Available', FALSE, FALSE, FALSE, 5),
+  -- Stadium Lot (lot 6): commuter, reservable like the original spot
+  ('STAD-A02', 1, 'Available', TRUE, FALSE, FALSE, 6),
+  ('STAD-A03', 1, 'Reserved', TRUE, FALSE, FALSE, 6),
+  ('STAD-ADA01', 1, 'Available', TRUE, TRUE, FALSE, 6),
+  -- Lot 24 (lot 7): faculty/gated-faculty, reservable
+  ('L24-D02', 4, 'Available', TRUE, FALSE, FALSE, 7),
+  ('L24-E01', 5, 'Occupied', TRUE, FALSE, FALSE, 7),
+  ('L24-EV01', 4, 'Available', TRUE, FALSE, TRUE, 7),
+  -- Satellite Lot 1 (lot 8): first-year resident, reservable
+  ('SAT1-F02', 6, 'Available', TRUE, FALSE, FALSE, 8),
+  ('SAT1-F03', 6, 'Reserved', TRUE, FALSE, FALSE, 8),
+  ('SAT1-ADA01', 6, 'Available', TRUE, TRUE, FALSE, 8),
+  -- Satellite Lot 2 (lot 9): first-year resident, reservable
+  ('SAT2-F02', 6, 'Available', TRUE, FALSE, FALSE, 9),
+  ('SAT2-F03', 6, 'Available', TRUE, FALSE, FALSE, 9),
+  ('SAT2-EV01', 6, 'Occupied', TRUE, FALSE, TRUE, 9),
+  -- Walker Avenue Apartments Lot (lot 10): apartments, reservable
+  ('WAA-B02', 2, 'Available', TRUE, FALSE, FALSE, 10),
+  ('WAA-B03', 2, 'Occupied', TRUE, FALSE, FALSE, 10),
+  ('WAA-ADA01', 2, 'Available', TRUE, TRUE, FALSE, 10);
 
 -- -----------------------------------------------------
 -- permits (10)

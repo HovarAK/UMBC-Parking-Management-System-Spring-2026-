@@ -25,7 +25,7 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     role_id INT NOT NULL,
-    FOREIGN KEY (role_id) REFERENCES systemRoles(role_id)
+    FOREIGN KEY (role_id) REFERENCES systemRoles(role_id) ON DELETE RESTRICT
 );
 
 -- Create the vehicles table to store information about vehicles owned by users. Each vehicle is linked to a user and has attributes such as plate number, make, model, and color.
@@ -36,7 +36,7 @@ CREATE TABLE vehicles (
     model VARCHAR(50) NOT NULL,
     color VARCHAR(30) NOT NULL,
     user_id INT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT
 );
 
 -- Parking Related Tables
@@ -48,12 +48,21 @@ CREATE TABLE parkingTypes (
     info VARCHAR(100) NOT NULL
 );
 
--- Lots represent parking areas and are linked to a specific parking type. They have attributes to indicate their location, whether they are gated, and their total capacity.
+-- Lots represent parking areas and have attributes to indicate their
+-- location, whether they are gated, and their advertised capacity. Note
+-- that parking type is a property of individual spots (see the spots
+-- table below), not of the lot as a whole -- a single lot can and does mix
+-- spot types (e.g. a garage with both faculty and visitor spots).
+-- capacity is the lot's advertised/planning capacity, not a literal count
+-- of spots rows. It is intentionally larger than the number of spots
+-- tracked in this database, the same way real permit programs advertise
+-- capacity well above what a small demo dataset instantiates row-by-row.
 CREATE TABLE lots (
     lot_id SERIAL PRIMARY KEY,
     lot_name VARCHAR(100) NOT NULL,
     location VARCHAR(255) NOT NULL,
-    is_gated BOOLEAN NOT NULL
+    is_gated BOOLEAN NOT NULL,
+    capacity INT NOT NULL CHECK (capacity > 0)
 );
 
 -- Spots represent individual parking spaces within a lot and are linked to the lot they belong to. They have attributes to indicate their type, current status, and whether they can be reserved.
@@ -64,10 +73,17 @@ CREATE TABLE spots (
     current_status VARCHAR(20) NOT NULL
 	CHECK (current_status IN ('Available', 'Occupied', 'Reserved')),
     is_reservable BOOLEAN NOT NULL,
+    is_ada BOOLEAN NOT NULL DEFAULT FALSE,
+    has_ev_charging BOOLEAN NOT NULL DEFAULT FALSE,
     lot_id INT NOT NULL,
-    FOREIGN KEY (lot_id) REFERENCES lots(lot_id),
-    FOREIGN KEY (parking_type_id) REFERENCES parkingTypes(parking_type_id),
-    UNIQUE (lot_id, spot_label)
+    FOREIGN KEY (lot_id) REFERENCES lots(lot_id) ON DELETE RESTRICT,
+    FOREIGN KEY (parking_type_id) REFERENCES parkingTypes(parking_type_id) ON DELETE RESTRICT,
+    UNIQUE (lot_id, spot_label),
+    -- A spot that isn't reservable should never be sitting in 'Reserved'
+    -- status -- that combination means the app-level reservation flow
+    -- marked a spot as reserved that was never supposed to accept
+    -- reservations in the first place.
+    CHECK (NOT (current_status = 'Reserved' AND is_reservable = FALSE))
 );
 
 -- Reservation and Permit Related Tables
@@ -84,8 +100,8 @@ CREATE TABLE permits (
     valid_from DATE NOT NULL,
     valid_to DATE NOT NULL,
     user_id INT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (parking_type_id) REFERENCES parkingTypes(parking_type_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (parking_type_id) REFERENCES parkingTypes(parking_type_id) ON DELETE RESTRICT,
     CHECK (valid_to >= valid_from)
 );
 
@@ -109,9 +125,9 @@ CREATE TABLE reservations (
     user_id INT NOT NULL,
     vehicle_id INT NOT NULL,
     spot_id INT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
-    FOREIGN KEY (spot_id) REFERENCES spots(spot_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id) ON DELETE RESTRICT,
+    FOREIGN KEY (spot_id) REFERENCES spots(spot_id) ON DELETE RESTRICT,
     CHECK (end_time >= start_time),
     EXCLUDE USING gist (
         spot_id WITH =,
@@ -132,22 +148,39 @@ CREATE TABLE parkingSessions (
     spot_id INT NOT NULL,
     reservation_id INT NULL,
     permit_id INT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
-    FOREIGN KEY (spot_id) REFERENCES spots(spot_id),
-    FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id),
-    FOREIGN KEY (permit_id) REFERENCES permits(permit_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id) ON DELETE RESTRICT,
+    FOREIGN KEY (spot_id) REFERENCES spots(spot_id) ON DELETE RESTRICT,
+    FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id) ON DELETE SET NULL,
+    FOREIGN KEY (permit_id) REFERENCES permits(permit_id) ON DELETE SET NULL,
     CHECK (end_time >= start_time)
 );
 
 -- Ticketing Related Tables
+-- -------------------------------------------------------------------
+-- Canonical fine amount per violation type. auto_ticket_violations()
+-- looks amounts up here instead of hardcoding them as literals, so every
+-- ticket -- whether inserted by the procedure or seeded/created directly
+-- -- is priced from one source of truth. tickets.violation_type is a
+-- foreign key into this table rather than its own separate CHECK list,
+-- so the set of valid violation types can't drift between the two tables.
+CREATE TABLE violationRates (
+    violation_type VARCHAR(100) PRIMARY KEY
+        CHECK (violation_type IN ('No Permit', 'Expired Permit',
+                                   'Unauthorized Spot', 'Overtime')),
+    fine_amount DECIMAL(10, 2) NOT NULL CHECK (fine_amount >= 0)
+);
+
+-- tickets.fine_amount is still its own stored column (not derived from
+-- violationRates at read time) because a ticket should keep the amount it
+-- was actually charged even if the rate schedule changes later -- the
+-- same reason an invoice line item stores its own price instead of
+-- re-joining a current price list.
 CREATE TABLE tickets (
     ticket_id SERIAL PRIMARY KEY,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    violation_type VARCHAR(100) NOT NULL
-	CHECK (violation_type IN ('No Permit', 'Expired Permit', 
-				  'Unauthorized Spot', 'Overtime')),
-    fine_amount DECIMAL(10, 2) NOT NULL,
+    violation_type VARCHAR(100) NOT NULL,
+    fine_amount DECIMAL(10, 2) NOT NULL CHECK (fine_amount >= 0),
     has_paid BOOLEAN NOT NULL DEFAULT FALSE,
     issued_to_user_id INT NOT NULL,
     issued_by_user_id INT NOT NULL,
@@ -155,12 +188,13 @@ CREATE TABLE tickets (
     vehicle_id INT NOT NULL,
     permit_id INT NULL,
     session_id INT NULL,
-    FOREIGN KEY (issued_to_user_id) REFERENCES users(user_id),
-    FOREIGN KEY (issued_by_user_id) REFERENCES users(user_id),
-    FOREIGN KEY (spot_id) REFERENCES spots(spot_id),
-    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id),
-    FOREIGN KEY (permit_id) REFERENCES permits(permit_id),
-    FOREIGN KEY (session_id) REFERENCES parkingSessions(session_id)
+    FOREIGN KEY (violation_type) REFERENCES violationRates(violation_type) ON DELETE RESTRICT,
+    FOREIGN KEY (issued_to_user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (issued_by_user_id) REFERENCES users(user_id) ON DELETE RESTRICT,
+    FOREIGN KEY (spot_id) REFERENCES spots(spot_id) ON DELETE RESTRICT,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id) ON DELETE RESTRICT,
+    FOREIGN KEY (permit_id) REFERENCES permits(permit_id) ON DELETE SET NULL,
+    FOREIGN KEY (session_id) REFERENCES parkingSessions(session_id) ON DELETE SET NULL
 );
 
 -- Table that represents triggers of the Sensors
@@ -169,10 +203,10 @@ CREATE TABLE IF NOT EXISTS sensorEvents (
     spot_id INT NOT NULL,
     event_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     event_type VARCHAR(30) NOT NULL
-        CHECK (event_type IN ('OCCUPIED', 'VACANT', 'RESERVED')),    
+        CHECK (event_type IN ('OCCUPIED', 'VACANT', 'RESERVED')),
     sensor_value VARCHAR(5) NOT NULL
 	CHECK (sensor_value IN ('ON', 'OFF')),
-    FOREIGN KEY (spot_id) REFERENCES spots(spot_id)
+    FOREIGN KEY (spot_id) REFERENCES spots(spot_id) ON DELETE RESTRICT
 );
 
 
@@ -400,6 +434,58 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ----------------------------------------------------
+-- PROCEDURE: cancel_reservation
+-- PURPOSE: Cancels an existing reservation without
+--          deleting it, and frees the related spot.
+--          This is the gap delete_reservation() doesn't
+--          cover: a plain UPDATE ... SET status =
+--          'Cancelled' would leave the spot stuck showing
+--          'Reserved' forever, since nothing else resets
+--          it. Cancelling (rather than deleting) also
+--          keeps the row for history/reporting, and the
+--          reservations_spot_id_tsrange_excl constraint
+--          already exempts 'Cancelled' rows so the slot
+--          becomes bookable again immediately.
+-- PRE-CONDITIONS:
+--   1. The reservation must exist in reservations.
+--   2. The reservation must not already be Cancelled or
+--      Completed.
+-- POST-CONDITIONS:
+--   1. The reservation's status is set to 'Cancelled'.
+--   2. The related spot status is updated to 'Available'.
+-- ----------------------------------------------------
+CREATE OR REPLACE PROCEDURE cancel_reservation(
+    p_reservation_id INT
+)
+AS $$
+DECLARE
+    reserved_spot_id INT;
+    current_reservation_status VARCHAR(20);
+BEGIN
+    SELECT spot_id, status
+    INTO reserved_spot_id, current_reservation_status
+    FROM reservations
+    WHERE reservation_id = p_reservation_id;
+
+    IF reserved_spot_id IS NULL THEN
+        RAISE EXCEPTION 'Reservation does not exist';
+    END IF;
+
+    IF current_reservation_status IN ('Cancelled', 'Completed') THEN
+        RAISE EXCEPTION 'Reservation is already % and cannot be cancelled', current_reservation_status;
+    END IF;
+
+    UPDATE reservations
+    SET status = 'Cancelled'
+    WHERE reservation_id = p_reservation_id;
+
+    UPDATE spots
+    SET current_status = 'Available'
+    WHERE spot_id = reserved_spot_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------
 -- PROCEDURE: auto_ticket_violations
 -- PURPOSE: Scans parking sessions and automatically
 --          creates tickets for violations.
@@ -436,7 +522,7 @@ BEGIN
     )
     SELECT
         'No Permit',
-        50.00,
+        (SELECT fine_amount FROM violationRates WHERE violation_type = 'No Permit'),
         FALSE,
         ps.user_id,
         p_issued_by_user_id,
@@ -467,7 +553,7 @@ BEGIN
     )
     SELECT
         'Expired Permit',
-        75.00,
+        (SELECT fine_amount FROM violationRates WHERE violation_type = 'Expired Permit'),
         FALSE,
         ps.user_id,
         p_issued_by_user_id,
@@ -561,6 +647,7 @@ SELECT
     l.lot_id,
     l.lot_name,
     l.location,
+    l.capacity,
     COUNT(s.spot_id) AS total_spots,
     COUNT(CASE WHEN s.current_status = 'Available' THEN 1 END) AS available_spots,
     COUNT(CASE WHEN s.current_status = 'Occupied' THEN 1 END) AS occupied_spots,
@@ -568,7 +655,7 @@ SELECT
 FROM lots l
 LEFT JOIN spots s
     ON l.lot_id = s.lot_id
-GROUP BY l.lot_id, l.lot_name, l.location;
+GROUP BY l.lot_id, l.lot_name, l.location, l.capacity;
 
 
 -- Overdue Payments
