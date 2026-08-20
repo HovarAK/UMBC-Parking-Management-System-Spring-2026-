@@ -62,7 +62,15 @@ services:
     container_name: umbc_parking_web
     restart: unless-stopped
     depends_on:
-      - db-runner
+      db-runner:
+        # Wait for db-runner to actually finish seeding, not just start --
+        # it's a one-shot container that exits right after running, so a
+        # plain list-form `depends_on` would only guarantee it *started*.
+        # web's own error handling (app/db.py) still degrades gracefully
+        # to a friendly 503 if this condition isn't honored by the
+        # compose implementation in use, or if the schema still isn't
+        # ready for some other reason.
+        condition: service_completed_successfully
     environment:
       DB_HOST: db
       DB_PORT: 5432
