@@ -64,14 +64,19 @@ CREATE TABLE spots (
 -- Reservation and Permit Related Tables
 -- -------------------------------------------------------------------
 -- Permits can be issued to users for specific parking privileges and are linked to parking sessions and reservations.
+-- permit_type is a foreign key into parkingTypes rather than free text, so a
+-- permit's type shares the same enforced vocabulary as the spots it grants
+-- access to (see the spots table) instead of drifting into its own set of
+-- ad hoc strings.
 CREATE TABLE permits (
     permit_id SERIAL PRIMARY KEY,
-    permit_type VARCHAR(50) NOT NULL,
+    parking_type_id INT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     valid_from DATE NOT NULL,
     valid_to DATE NOT NULL,
     user_id INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (parking_type_id) REFERENCES parkingTypes(parking_type_id),
     CHECK (valid_to >= valid_from)
 );
 
@@ -159,17 +164,19 @@ CREATE TABLE IF NOT EXISTS sensorEvents (
 --          rules are satisfied.
 -- PRE-CONDITIONS:
 --   1. The user must exist in users.
---   2. valid_from must be on or before valid_to.
---   3. The user must not already have an overlapping
---      permit of the same type.
+--   2. The parking type must exist in parkingTypes.
+--   3. valid_from must be on or before valid_to.
+--   4. The user must not already have an overlapping
+--      permit of the same parking type.
 -- POST-CONDITIONS:
 --   1. A new row is inserted into permits.
---   2. The new permit is linked to the given user.
+--   2. The new permit is linked to the given user and
+--      parking type.
 --   3. The function returns the new permit_id.
 -- ----------------------------------------------------
 CREATE OR REPLACE FUNCTION issue_permit(
     p_user_id INT,
-    p_permit_type VARCHAR(50),
+    p_parking_type_id INT,
     p_valid_from DATE,
     p_valid_to DATE
 )
@@ -178,6 +185,7 @@ AS $$
 DECLARE
     new_permit_id INT;
     user_count INT;
+    parking_type_count INT;
     permit_count INT;
 BEGIN
     -- check dates
@@ -195,22 +203,32 @@ BEGIN
         RAISE EXCEPTION 'User does not exist';
     END IF;
 
+    -- check parking type exists
+    SELECT COUNT(*)
+    INTO parking_type_count
+    FROM parkingTypes
+    WHERE parking_type_id = p_parking_type_id;
+
+    IF parking_type_count = 0 THEN
+        RAISE EXCEPTION 'Parking type does not exist';
+    END IF;
+
     -- check if same kind of permit already overlaps
     SELECT COUNT(*)
     INTO permit_count
     FROM permits
     WHERE user_id = p_user_id
-      AND permit_type = p_permit_type
+      AND parking_type_id = p_parking_type_id
       AND p_valid_from <= valid_to
       AND p_valid_to >= valid_from;
 
     IF permit_count > 0 THEN
-        RAISE EXCEPTION 'User already has an overlapping permit';
+        RAISE EXCEPTION 'User already has an overlapping permit of that parking type';
     END IF;
 
     -- insert permit
-    INSERT INTO permits (permit_type, valid_from, valid_to, user_id)
-    VALUES (p_permit_type, p_valid_from, p_valid_to, p_user_id)
+    INSERT INTO permits (parking_type_id, valid_from, valid_to, user_id)
+    VALUES (p_parking_type_id, p_valid_from, p_valid_to, p_user_id)
     RETURNING permit_id INTO new_permit_id;
 
     RETURN new_permit_id;
@@ -482,7 +500,8 @@ EXECUTE FUNCTION update_spot_status();
 CREATE OR REPLACE VIEW CurrentActivePermits AS
 SELECT
     p.permit_id,
-    p.permit_type,
+    pt.code AS parking_type_code,
+    pt.info AS parking_type_info,
     p.valid_from,
     p.valid_to,
     u.user_id,
@@ -492,6 +511,8 @@ SELECT
 FROM permits p
 JOIN users u
     ON p.user_id = u.user_id
+JOIN parkingTypes pt
+    ON p.parking_type_id = pt.parking_type_id
 WHERE CURRENT_DATE BETWEEN p.valid_from AND p.valid_to;
 
 
