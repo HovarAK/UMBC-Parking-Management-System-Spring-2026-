@@ -11,7 +11,12 @@ services:
       - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql:/docker-entrypoint-initdb.d:Z
+    # Note: ./sql is intentionally NOT mounted into /docker-entrypoint-initdb.d.
+    # Postgres runs every file it finds there alphabetically on first init
+    # (createDDL.sql, then dropDDL.sql, then indexAll.sql, ...), which drops
+    # the schema right after creating it and then fails on the rest. The
+    # db-runner service below runs the files in the correct explicit order
+    # instead.
 
   pgadmin:
     image: docker.io/dpage/pgadmin4:latest
@@ -41,7 +46,10 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      SQL_FILE: /app/sql/createDDL.sql
+      # Ordered init sequence: schema, then seed data, then indexes.
+      # dropDDL.sql, queryAll.sql, and transaction.sql are intentionally
+      # excluded — they are meant to be run manually (see README).
+      SQL_FILES: /app/sql/createDDL.sql,/app/sql/loadAll.sql,/app/sql/indexAll.sql
     volumes:
       - ./sql:/app/sql:Z
     restart: "no"
