@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ lot.lot_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ lot.lot_name }}</h1>
+    <p class="subtitle">{{ lot.location }} &middot; {{ "Gated" if lot.is_gated else "Ungated" }} &middot; capacity {{ lot.capacity }}</p>
+  </div>
+  <div class="btn-row">
+    <a class="btn btn-secondary" href="{{ url_for('lots.edit_lot', lot_id=lot.lot_id) }}">Edit</a>
+    <form class="inline" method="post" action="{{ url_for('lots.delete_lot', lot_id=lot.lot_id) }}"
+          onsubmit="return confirm('Delete this lot? This only works if no spots reference it.');">
+      <button class="btn btn-danger" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+
+<h2>Tracked spots ({{ spots|length }})</h2>
+{% if spots %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Label</th><th>Type</th><th>Status</th><th>Reservable</th><th>ADA</th><th>EV charging</th></tr>
+    </thead>
+    <tbody>
+      {% for s in spots %}
+      <tr>
+        <td>{{ s.spot_label }}</td>
+        <td>{{ s.type_code }} &ndash; {{ s.type_info }}</td>
+        <td><span class="badge badge-{{ s.current_status }}">{{ s.current_status }}</span></td>
+        <td>{{ "Yes" if s.is_reservable else "No" }}</td>
+        <td>{{ "Yes" if s.is_ada else "No" }}</td>
+        <td>{{ "Yes" if s.has_ev_charging else "No" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No spots tracked for this lot yet.</div>
+{% endif %}
+
+<p><a href="{{ url_for('lots.list_lots') }}">&larr; Back to lots</a></p>
+{% endblock %}

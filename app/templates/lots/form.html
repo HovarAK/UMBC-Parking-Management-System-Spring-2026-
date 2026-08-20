@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit lot" if lot else "New lot" }}{% endblock %}
+{% block content %}
+<h1>{{ "Edit lot" if lot else "New lot" }}</h1>
+<div class="form-card">
+  <form method="post">
+    <div class="form-row">
+      <label for="lot_name">Lot name</label>
+      <input id="lot_name" name="lot_name" type="text" required value="{{ lot.lot_name if lot else '' }}">
+    </div>
+    <div class="form-row">
+      <label for="location">Location</label>
+      <input id="location" name="location" type="text" required value="{{ lot.location if lot else '' }}">
+    </div>
+    <div class="form-row">
+      <label for="capacity">Capacity <span class="hint">advertised/planning capacity, not a spot count</span></label>
+      <input id="capacity" name="capacity" type="number" min="1" required value="{{ lot.capacity if lot else '' }}">
+    </div>
+    <div class="form-row checkbox-row">
+      <input id="is_gated" name="is_gated" type="checkbox" {% if lot and lot.is_gated %}checked{% endif %}>
+      <label for="is_gated">Gated lot</label>
+    </div>
+    <div class="btn-row">
+      <button class="btn" type="submit">{{ "Save changes" if lot else "Create lot" }}</button>
+      <a class="btn btn-secondary" href="{{ url_for('lots.list_lots') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

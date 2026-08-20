@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="subtitle">Live snapshot of lot availability, permits, and outstanding tickets.</p>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat">
+    <div class="value">{{ active_permits }}</div>
+    <div class="label">Active permits</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ overdue.count }}</div>
+    <div class="label">Unpaid tickets</div>
+  </div>
+  <div class="stat">
+    <div class="value">${{ "%.2f"|format(overdue.total) }}</div>
+    <div class="label">Total owed</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ lot_availability|length }}</div>
+    <div class="label">Lots tracked</div>
+  </div>
+</div>
+
+<h2>Lot availability</h2>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Lot</th><th>Location</th><th>Capacity</th><th>Tracked spots</th>
+        <th>Available</th><th>Occupied</th><th>Reserved</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lot in lot_availability %}
+      <tr>
+        <td><a href="{{ url_for('lots.detail', lot_id=lot.lot_id) }}">{{ lot.lot_name }}</a></td>
+        <td>{{ lot.location }}</td>
+        <td>{{ lot.capacity }}</td>
+        <td>{{ lot.total_spots }}</td>
+        <td>{{ lot.available_spots }}</td>
+        <td>{{ lot.occupied_spots }}</td>
+        <td>{{ lot.reserved_spots }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Upcoming &amp; active reservations</h2>
+{% if upcoming_reservations %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>When</th><th>User</th><th>Spot</th><th>Lot</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for r in upcoming_reservations %}
+      <tr>
+        <td>{{ r.start_time }} &ndash; {{ r.end_time }}</td>
+        <td>{{ r.first_name }} {{ r.last_name }}</td>
+        <td>{{ r.spot_label }}</td>
+        <td>{{ r.lot_name }}</td>
+        <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">No pending or active reservations right now.</div>
+{% endif %}
+{% endblock %}

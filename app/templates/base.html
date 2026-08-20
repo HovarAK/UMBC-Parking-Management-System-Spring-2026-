@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}UMBC Parking{% endblock %} · UMBC Parking</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('dashboard.index') }}">UMBC Parking</a>
+      <nav class="nav">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+        <a href="{{ url_for('lots.list_lots') }}">Lots</a>
+        <a href="{{ url_for('permits.list_permits') }}">Permits</a>
+        <a href="{{ url_for('reservations.list_reservations') }}">Reservations</a>
+        <a href="{{ url_for('tickets.list_tickets') }}">Tickets</a>
+        <a href="{{ url_for('users.list_users') }}">Users</a>
+        <a href="{{ url_for('vehicles.list_vehicles') }}">Vehicles</a>
+      </nav>
+      <form class="act-as" method="post" action="{{ url_for('session_routes.act_as') }}">
+        <label for="act-as-select">Acting as</label>
+        <select id="act-as-select" name="user_id" onchange="this.form.submit()">
+          <option value="">— none —</option>
+          {% for u in all_users_for_act_as() %}
+            <option value="{{ u.user_id }}" {% if acting_user and acting_user.user_id == u.user_id %}selected{% endif %}>
+              {{ u.first_name }} {{ u.last_name }} ({{ u.role_name }})
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+  </header>
+
+  <main class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <p>UMBC Parking Management System — demo data, not affiliated with or sourced from UMBC.</p>
+  </footer>
+</body>
+</html>

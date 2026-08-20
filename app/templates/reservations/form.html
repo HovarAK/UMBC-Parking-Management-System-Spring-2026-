@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}New reservation{% endblock %}
+{% block content %}
+<h1>New reservation</h1>
+<div class="form-card">
+  <form method="post">
+    <div class="form-row">
+      <label for="user_id">User</label>
+      <select id="user_id" name="user_id" required>
+        <option value="">Select a user&hellip;</option>
+        {% for u in users %}
+        <option value="{{ u.user_id }}">{{ u.first_name }} {{ u.last_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="vehicle_id">Vehicle</label>
+      <select id="vehicle_id" name="vehicle_id" required>
+        <option value="">Select a vehicle&hellip;</option>
+        {% for v in vehicles %}
+        <option value="{{ v.vehicle_id }}">{{ v.plate_number }} ({{ v.first_name }} {{ v.last_name }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="spot_id">Spot <span class="hint">reservable spots only</span></label>
+      <select id="spot_id" name="spot_id" required>
+        <option value="">Select a spot&hellip;</option>
+        {% for s in spots %}
+        <option value="{{ s.spot_id }}">{{ s.lot_name }} &ndash; {{ s.spot_label }} ({{ s.current_status }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="start_time">Start time</label>
+      <input id="start_time" name="start_time" type="datetime-local" required>
+    </div>
+    <div class="form-row">
+      <label for="end_time">End time</label>
+      <input id="end_time" name="end_time" type="datetime-local" required>
+    </div>
+    <div class="form-row">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        {% for s in statuses %}
+        {% if s in ("Pending", "Active") %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn" type="submit">Create reservation</button>
+      <a class="btn btn-secondary" href="{{ url_for('reservations.list_reservations') }}">Cancel</a>
+    </div>
+    <p class="hint" style="margin-top:0.75rem;">
+      Blocked if the spot already has an overlapping, non-cancelled reservation for that time
+      &mdash; enforced by the database, even under concurrent requests.
+    </p>
+  </form>
+</div>
+{% endblock %}

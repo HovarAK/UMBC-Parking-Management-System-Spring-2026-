@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Issue ticket{% endblock %}
+{% block content %}
+<h1>Issue ticket</h1>
+<p class="subtitle">Issuing as {{ acting_user.first_name }} {{ acting_user.last_name }} ({{ acting_user.role_name }}).</p>
+<div class="form-card">
+  <form method="post">
+    <div class="form-row">
+      <label for="violation_type">Violation type</label>
+      <select id="violation_type" name="violation_type" required>
+        <option value="">Select a violation&hellip;</option>
+        {% for r in rates %}
+        <option value="{{ r.violation_type }}">{{ r.violation_type }} (${{ "%.2f"|format(r.fine_amount) }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="issued_to_user_id">Issued to</label>
+      <select id="issued_to_user_id" name="issued_to_user_id" required>
+        <option value="">Select a user&hellip;</option>
+        {% for u in users %}
+        <option value="{{ u.user_id }}">{{ u.first_name }} {{ u.last_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="vehicle_id">Vehicle</label>
+      <select id="vehicle_id" name="vehicle_id" required>
+        <option value="">Select a vehicle&hellip;</option>
+        {% for v in vehicles %}
+        <option value="{{ v.vehicle_id }}">{{ v.plate_number }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="spot_id">Spot</label>
+      <select id="spot_id" name="spot_id" required>
+        <option value="">Select a spot&hellip;</option>
+        {% for s in spots %}
+        <option value="{{ s.spot_id }}">{{ s.lot_name }} &ndash; {{ s.spot_label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn" type="submit">Issue ticket</button>
+      <a class="btn btn-secondary" href="{{ url_for('tickets.list_tickets') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
