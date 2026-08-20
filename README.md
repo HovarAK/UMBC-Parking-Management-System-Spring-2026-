@@ -185,7 +185,9 @@ Once it's up:
 * **Web app:** http://localhost:5000 (or your `WEB_PORT`)
 * **pgAdmin:** http://localhost:5050 (or your `PGADMIN_PORT`) — see [Connecting with pgAdmin](#connecting-with-pgadmin)
 
-<!-- Screenshots to be added here: dashboard, lots list, reservation form, permits list. -->
+![Dashboard](docs/screenshots/dashboard.png)
+
+<!-- More screenshots to add here: lots list, reservation form, permits list. -->
 
 Check everything came up:
 
