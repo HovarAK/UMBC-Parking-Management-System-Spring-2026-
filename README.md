@@ -1,4 +1,3 @@
-l````markdown
 # UMBC-Parking-Management-System-Spring-2026-
 
 ## Overview
@@ -9,24 +8,31 @@ At the current stage, this repository focuses on the PostgreSQL database layer, 
 
 This setup allows contributors to run the database locally in a containerized environment instead of manually installing and configuring PostgreSQL on their machine.
 
+> Note: The sample data in this repository (lot names, permit types, users, etc.) is illustrative and fictional. It is not sourced from or verified against UMBC's actual parking structure.
+
 ## Project Structure
 
 ```text
 UMBC-Parking-Management-System-Spring-2026-/
-├── compose.yaml
-├── .env
-├── .env.example
-├── .gitignore
+├── docker-compose.yml
+├── LICENSE
 ├── README.md
-├── dropDDL.sql
-├── createDDL.sql
-├── loadAll.sql
-├── queryAll.sql
-├── indexAll.sql
-└── transaction.sql
-````
+├── .env.example
+├── runner/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── run_sql.py
+└── sql/
+    ├── createDDL.sql
+    ├── dropDDL.sql
+    ├── loadAll.sql
+    ├── queryAll.sql
+    ├── indexAll.sql
+    ├── transaction.sql
+    └── smoke_test.sql
+```
 
-Main SQL files:
+Main SQL files (in `sql/`):
 
 * `dropDDL.sql` drops the existing database objects so the database can be reset.
 * `createDDL.sql` creates the schema, tables, constraints, functions, triggers, procedures, and views.
@@ -34,6 +40,9 @@ Main SQL files:
 * `queryAll.sql` runs the project queries used to demonstrate joins, aggregation, subqueries, and reporting.
 * `indexAll.sql` creates indexes used for performance testing.
 * `transaction.sql` sets up and documents the concurrency test for double booking and prevention.
+* `smoke_test.sql` is currently an empty placeholder reserved for future automated smoke tests.
+
+`runner/` contains a small Python bootstrap container that waits for PostgreSQL to become available and then executes a single SQL file (`run_sql.py`) — it is not an application/API layer.
 
 ## Setup
 
@@ -124,7 +133,7 @@ docker ps
 
 ## Running the SQL Files from the Terminal
 
-Run the commands below from the same folder that contains the `.sql` files.
+Run the commands below from the same folder that contains the `.sql` files (`sql/`).
 
 The recommended order is:
 
@@ -140,37 +149,37 @@ The recommended order is:
 Reset the database:
 
 ```bash
-podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < dropDDL.sql
+podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/dropDDL.sql
 ```
 
 Create the schema:
 
 ```bash
-podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < createDDL.sql
+podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/createDDL.sql
 ```
 
 Load the sample data:
 
 ```bash
-podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < loadAll.sql
+podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/loadAll.sql
 ```
 
 Run the project queries:
 
 ```bash
-podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < queryAll.sql
+podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/queryAll.sql
 ```
 
 Create indexes for performance testing:
 
 ```bash
-podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < indexAll.sql
+podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/indexAll.sql
 ```
 
 Run the transaction setup file:
 
 ```bash
-podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < transaction.sql
+podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/transaction.sql
 ```
 
 > Note: `transaction.sql` contains Session 1 and Session 2 code blocks for the concurrency test. Those blocks should be copied and run manually in two separate pgAdmin Query Tool windows so the blocked transaction behavior can be observed.
@@ -180,37 +189,37 @@ podman exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U
 Reset the database:
 
 ```bash
-docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < dropDDL.sql
+docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/dropDDL.sql
 ```
 
 Create the schema:
 
 ```bash
-docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < createDDL.sql
+docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/createDDL.sql
 ```
 
 Load the sample data:
 
 ```bash
-docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < loadAll.sql
+docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/loadAll.sql
 ```
 
 Run the project queries:
 
 ```bash
-docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < queryAll.sql
+docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/queryAll.sql
 ```
 
 Create indexes for performance testing:
 
 ```bash
-docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < indexAll.sql
+docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/indexAll.sql
 ```
 
 Run the transaction setup file:
 
 ```bash
-docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < transaction.sql
+docker exec -i -e PGPASSWORD=password umbc_parking_db psql -v ON_ERROR_STOP=1 -U admin -d umbc_parking < sql/transaction.sql
 ```
 
 ## If the Container Name Is Different
@@ -407,4 +416,4 @@ podman compose down -v
 docker compose down -v
 ```
 
-Use `down -v` carefully because it deletes the PostgreSQL volume and removes the stored database data.
+Use `down -v` carefully because it deletes the PostgreSQL volume and removes the stored database data. Plain `down` (without `-v`) does not delete the named volume — your data persists across `up`/`down` cycles unless you explicitly remove the volume.
