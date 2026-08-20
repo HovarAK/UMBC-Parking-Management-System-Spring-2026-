@@ -191,8 +191,6 @@ Once it's up:
 |---|---|
 | ![Lots list](docs/screenshots/lots-list.png) | ![New reservation form](docs/screenshots/reservation-form.png) |
 
-<!-- More screenshots to add here: permits list. -->
-
 Check everything came up:
 
 ```bash
