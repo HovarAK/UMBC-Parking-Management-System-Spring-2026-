@@ -187,7 +187,11 @@ Once it's up:
 
 ![Dashboard](docs/screenshots/dashboard.png)
 
-<!-- More screenshots to add here: lots list, reservation form, permits list. -->
+| Lots | New reservation |
+|---|---|
+| ![Lots list](docs/screenshots/lots-list.png) | ![New reservation form](docs/screenshots/reservation-form.png) |
+
+<!-- More screenshots to add here: permits list. -->
 
 Check everything came up:
 
